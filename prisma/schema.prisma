@@ -8,15 +8,14 @@ datasource db {
 
 enum Rol {
   admin
-  docente
-  alumno
-  staff
+  ponente
+  coordinador
+  participante
+  asistente
+  usuario_general
 }
 
-enum Estado {
-  activo
-  inactivo
-}
+
 
 enum EstadoSolicitud {
   pendiente
@@ -38,8 +37,8 @@ model Usuario {
   nombre_completo String   @db.VarChar(150)
   matricula       String   @unique @db.VarChar(50)
   contrasena      String   @db.VarChar(255)
-  rol             Rol      @default(alumno)
-  estado          Estado   @default(activo)
+  rol             Rol      @default(usuario_general)
+  estado          Int   @default(1)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -62,7 +61,7 @@ model Usuario {
 model Edificio {
   id_edificio  Int      @id @default(autoincrement())
   nombre_clave String   @db.VarChar(100)
-  estado       Estado   @default(activo)
+  estado       Int   @default(1)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -77,7 +76,7 @@ model Edificio {
 model Aula {
   id_aula      Int      @id @default(autoincrement())
   nombre_clave String   @db.VarChar(100)
-  estado       Estado   @default(activo)
+  estado       Int   @default(1)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -121,7 +120,7 @@ model Periodo {
   nombre_clave String   @db.VarChar(100)
   fecha_inicio DateTime
   fecha_final  DateTime
-  estado       Estado   @default(activo)
+  estado       Int   @default(1)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
