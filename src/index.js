@@ -14,6 +14,7 @@ const reportesRoutes = require('./routes/reportes.routes');
 const periodosRoutes = require('./routes/periodos.routes');
 const actividadesRoutes = require('./routes/actividades.routes');
 const configuracionesRoutes = require('./routes/configuraciones.routes');
+const ponenteRoutes = require('./routes/ponente.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +23,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servir la carpeta de uploads de manera estática
+const path = require('path');
+const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads/materiales';
+app.use('/uploads/materiales', express.static(path.resolve(process.cwd(), UPLOAD_DIR)));
 
 // ── Montaje de rutas ────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -35,6 +41,7 @@ app.use('/api/reportes', reportesRoutes);
 app.use('/api/periodos', periodosRoutes);
 app.use('/api/actividades', actividadesRoutes);
 app.use('/api/configuraciones', configuracionesRoutes);
+app.use('/api/ponente', ponenteRoutes);
 
 // ── Ruta de health check ────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

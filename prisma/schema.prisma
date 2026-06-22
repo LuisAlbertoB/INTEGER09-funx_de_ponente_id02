@@ -29,6 +29,40 @@ enum TipoSolicitud {
   especial
 }
 
+enum NivelAcademico {
+  undergraduate
+  postgraduate
+  ambos
+}
+
+enum TipoMaterial {
+  pdf
+  pptx
+  video
+  link
+  imagen
+  otro
+}
+
+enum Genero {
+  hombre
+  mujer
+  otro
+  prefiero_no_decir
+}
+
+enum ParticipationLevel {
+  pasivo
+  activo
+  muy_activo
+}
+
+enum SentimientoGeneral {
+  positivo
+  neutral
+  negativo
+}
+
 // ------------------------------------------------------------
 // 1. USUARIOS
 // ------------------------------------------------------------
@@ -51,6 +85,8 @@ model Usuario {
   solicitudes             Solicitud[]             @relation("SolicitanteAula")
   solicitudesInmobiliario SolicitudInmobiliario[] @relation("SolicitanteInmobiliario")
   reportes                Reporte[]               @relation("ReportanteReporte")
+  conferencias            Conferencia[]           @relation("PonenteConferencia")
+  feedbacks               FeedbackAsistente[]     @relation("UsuarioFeedback")
 
   @@map("usuarios")
 }
@@ -87,6 +123,7 @@ model Aula {
   reportes       Reporte[]               @relation("AulaReporte")
   mantenimientos BitacoraMantenimiento[] @relation("AulaMantenimiento")
   inventarioBase AulaHasMobiliarioInfraestructura[]
+  conferencias   Conferencia[]           @relation("AulaConferencia")
 
   @@map("aulas")
 }
@@ -129,6 +166,7 @@ model Periodo {
   solicitudesInmobiliario SolicitudInmobiliario[]
   reportes                Reporte[]
   mantenimientos          BitacoraMantenimiento[]
+  conferencias            Conferencia[]
 
   @@map("periodos")
 }
@@ -144,7 +182,8 @@ model Actividad {
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
-  solicitudes Solicitud[]
+  solicitudes  Solicitud[]
+  conferencias Conferencia[]
 
   @@map("actividades")
 }
@@ -294,4 +333,118 @@ model BitacoraMantenimiento {
   periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
 
   @@map("bitacora_mantenimiento")
+}
+
+// ------------------------------------------------------------
+// 12. CONFERENCIA (Modulo Ponente)
+// ------------------------------------------------------------
+model Conferencia {
+  id_conferencia           Int            @id @default(autoincrement())
+  titulo                   String         @db.VarChar(200)
+  descripcion              String?        @db.Text
+  tematica                 String?        @db.VarChar(150)
+  nivel_academico_objetivo NivelAcademico @default(ambos)
+  duracion_estimada_min    Int            @default(60)
+  fecha_realizada          DateTime?
+  estado                   Int            @default(1)
+
+  id_ponente        Int
+  ponente           Usuario   @relation("PonenteConferencia", fields: [id_ponente], references: [id_usuario])
+
+  id_actividad      Int
+  actividad         Actividad @relation(fields: [id_actividad], references: [id_actividad])
+
+  id_aula_utilizada Int?
+  aula              Aula?     @relation("AulaConferencia", fields: [id_aula_utilizada], references: [id_aula])
+
+  id_periodo        Int
+  periodo           Periodo   @relation(fields: [id_periodo], references: [id_periodo])
+
+  materiales        MaterialDeApoyo[]
+  registroEvento    RegistroEvento?
+  feedbacks         FeedbackAsistente[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("conferencias")
+}
+
+// ------------------------------------------------------------
+// 13. MATERIAL DE APOYO
+// ------------------------------------------------------------
+model MaterialDeApoyo {
+  id_material        Int          @id @default(autoincrement())
+  tipo_archivo       TipoMaterial @default(otro)
+  titulo_material    String       @db.VarChar(150)
+  url_almacenamiento String       @db.VarChar(255)
+  tamanio_bytes      Int          @default(0)
+  publico            Boolean      @default(true)
+
+  id_conferencia Int
+  conferencia    Conferencia  @relation(fields: [id_conferencia], references: [id_conferencia])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("materiales_apoyo")
+}
+
+// ------------------------------------------------------------
+// 14. REGISTRO EVENTO (Conferencia Realizada)
+// ------------------------------------------------------------
+model RegistroEvento {
+  id_registro                   Int     @id @default(autoincrement())
+  num_asistentes_real           Int     @default(0)
+  num_participantes_registrados Int     @default(0)
+  porcentaje_asistencia         Decimal @default(0) @db.Decimal(5, 2)
+  comentario_general_ponente    String? @db.Text
+
+  id_conferencia Int         @unique
+  conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("registros_eventos")
+}
+
+// ------------------------------------------------------------
+// 15. FEEDBACK ASISTENTE (Motor ML)
+// ------------------------------------------------------------
+model FeedbackAsistente {
+  id_feedback              Int                @id @default(autoincrement())
+  
+  // Perfil
+  nivel_academico          NivelAcademico
+  especialidad             String?            @db.VarChar(150)
+  genero                   Genero             @default(prefiero_no_decir)
+  
+  // Engagement
+  duracion_interaccion_min Int                @default(0)
+  total_interacciones      Int                @default(0)
+  tareas_completadas       Int                @default(0)
+  porcentaje_aciertos      Decimal            @default(0) @db.Decimal(5, 2)
+  calificacion             Decimal            @default(0) @db.Decimal(4, 2)
+  participation_level      ParticipationLevel @default(pasivo)
+  
+  // NLP & Sentiment
+  sentimiento_general      SentimientoGeneral @default(neutral)
+  score_logistica          Int                @default(3)
+  score_contenido          Int                @default(3)
+  comentario_escrito       String?            @db.Text
+  
+  // Metadatos
+  fuente                   String             @default("sistema") @db.VarChar(50)
+
+  // Relaciones
+  id_conferencia Int
+  conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
+
+  id_usuario     Int?
+  usuario        Usuario?    @relation("UsuarioFeedback", fields: [id_usuario], references: [id_usuario])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("feedbacks_asistentes")
 }
