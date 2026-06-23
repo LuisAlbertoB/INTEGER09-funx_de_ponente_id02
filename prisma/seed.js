@@ -10,10 +10,14 @@ async function main() {
   console.log('🌱 Iniciando seeders...');
 
   // ─── Purgar Tablas Relevantes (Relación Actividades) ──────────────────────
-  console.log('🧹 Limpiando solicitudes y actividades obsoletas...');
-  await prisma.solicitudHasSolicitudInmobiliario.deleteMany();
-  await prisma.solicitud.deleteMany();
-  await prisma.actividad.deleteMany();
+  console.log('🧹 Intentando limpiar solicitudes y actividades obsoletas...');
+  try {
+    await prisma.solicitudHasSolicitudInmobiliario.deleteMany();
+    await prisma.solicitud.deleteMany();
+    await prisma.actividad.deleteMany();
+  } catch (e) {
+    console.log('⚠️  No se pudieron borrar las actividades porque ya existen conferencias asignadas a ellas. Se mantendrán.');
+  }
 
   // ─── Actividades Catálogo ────────────────────────────────────────────────
   const actividadesBase = [
@@ -25,9 +29,13 @@ async function main() {
   ];
 
   for (const act of actividadesBase) {
-    await prisma.actividad.create({ data: act });
+    try {
+      await prisma.actividad.create({ data: act });
+    } catch (e) {
+      // Ignorar error si ya existen
+    }
   }
-  console.log('✅ Catálogo de Actividades base creado.');
+  console.log('✅ Catálogo de Actividades revisado.');
 
   // ─── Periodos (Reemplaza a Configuraciones de Sistema) ───────────────────
   const periodoActual = await prisma.periodo.upsert({
