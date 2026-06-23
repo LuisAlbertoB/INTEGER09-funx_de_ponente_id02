@@ -1,4 +1,4 @@
-FROM node:18-bullseye-slim
+FROM node:22-bullseye-slim
 
 # Instalar dependencias del sistema necesarias para Prisma
 RUN apt-get update -y && apt-get install -y openssl
