@@ -37,7 +37,7 @@ async function main() {
       nombre_clave: 'Cuatrimestre 2026-A',
       fecha_inicio: new Date('2026-01-12T00:00:00.000Z'),
       fecha_final: new Date('2026-05-31T23:59:59.000Z'),
-      estado: 'activo'
+      estado: 1
     },
   });
 
@@ -48,7 +48,7 @@ async function main() {
       nombre_clave: 'Cuatrimestre 2026-B',
       fecha_inicio: new Date('2026-06-15T00:00:00.000Z'),
       fecha_final: new Date('2026-10-31T23:59:59.000Z'),
-      estado: 'inactivo'
+      estado: 0
     },
   });
   console.log('✅ Periodos de prueba creados.');
@@ -63,7 +63,7 @@ async function main() {
       matricula: '000000',
       contrasena: hashedPassword,
       rol: 'admin',
-      estado: 'activo',
+      estado: 1,
     },
   });
   console.log(`✅ Admin master creado: matricula=${adminMaster.matricula}`);
@@ -77,8 +77,8 @@ async function main() {
       nombre_completo: 'Docente de Prueba',
       matricula: '111111',
       contrasena: hashedDocente,
-      rol: 'docente',
-      estado: 'activo',
+      rol: 'ponente',
+      estado: 1,
     },
   });
   console.log(`✅ Docente de prueba creado: matricula=${docenteTest.matricula}`);
@@ -88,17 +88,17 @@ async function main() {
     prisma.edificio.upsert({
       where: { id_edificio: 1 },
       update: {},
-      create: { nombre_clave: 'Edificio A', estado: 'activo' },
+      create: { nombre_clave: 'Edificio A', estado: 1 },
     }),
     prisma.edificio.upsert({
       where: { id_edificio: 2 },
       update: {},
-      create: { nombre_clave: 'Edificio B', estado: 'activo' },
+      create: { nombre_clave: 'Edificio B', estado: 1 },
     }),
     prisma.edificio.upsert({
       where: { id_edificio: 3 },
       update: {},
-      create: { nombre_clave: 'Edificio C', estado: 'activo' },
+      create: { nombre_clave: 'Edificio C', estado: 1 },
     }),
   ]);
   console.log(`✅ ${edificios.length} Edificios creados.`);
@@ -120,7 +120,7 @@ async function main() {
     await prisma.aula.upsert({
       where: { id_aula: aula.id_aula },
       update: {},
-      create: { nombre_clave: aula.nombre_clave, id_edificio: aula.id_edificio, estado: 'activo' },
+      create: { nombre_clave: aula.nombre_clave, id_edificio: aula.id_edificio, estado: 1 },
     });
   }
   console.log(`✅ ${aulasData.length} Aulas creadas.`);

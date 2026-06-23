@@ -17,7 +17,7 @@ const login = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado.' });
     }
 
-    if (usuario.estado === 'inactivo') {
+    if (usuario.estado === 0) {
       return res.status(403).json({ message: 'Cuenta inactiva. Contacte al administrador.' });
     }
 

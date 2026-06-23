@@ -55,8 +55,9 @@ const createUsuario = async (req, res) => {
     return res.status(400).json({ message: 'Todos los campos son requeridos: nombre_completo, matricula, contrasena, rol.' });
   }
 
-  if (!['admin', 'docente'].includes(rol)) {
-    return res.status(400).json({ message: 'El rol debe ser "admin" o "docente".' });
+  const ROLES_VALIDOS = ['admin', 'ponente', 'coordinador', 'participante', 'asistente', 'usuario_general'];
+  if (!ROLES_VALIDOS.includes(rol)) {
+    return res.status(400).json({ message: `El rol debe ser uno de: ${ROLES_VALIDOS.join(', ')}.` });
   }
 
   try {
@@ -73,7 +74,7 @@ const createUsuario = async (req, res) => {
         matricula,
         contrasena: hashedPassword,
         rol,
-        estado: 'activo',
+        estado: 1,
         id_user_creator: req.user.id_usuario,
       },
       select: {
@@ -98,8 +99,8 @@ const updateEstadoUsuario = async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
-  if (!['activo', 'inactivo'].includes(estado)) {
-    return res.status(400).json({ message: 'El estado debe ser "activo" o "inactivo".' });
+  if (![1, 0].includes(estado)) {
+    return res.status(400).json({ message: 'El estado debe ser 1 (activo) o 0 (inactivo).' });
   }
 
   try {
@@ -161,6 +162,14 @@ const deleteUsuario = async (req, res) => {
     return res.status(200).json({ message: 'Usuario eliminado correctamente.' });
   } catch (error) {
     console.error('Error en deleteUsuario:', error);
+    
+    // P2003 es el código de error de Prisma para violaciones de Foreign Key
+    if (error.code === 'P2003') {
+      return res.status(409).json({ 
+        message: 'No se puede eliminar este usuario porque tiene solicitudes o registros asociados en el sistema. Te recomendamos desactivarlo (cambiar estado a 0) en lugar de eliminarlo.' 
+      });
+    }
+
     return res.status(500).json({ message: 'Error interno del servidor.' });
   }
 };

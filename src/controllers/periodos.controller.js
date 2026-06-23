@@ -9,7 +9,7 @@ const prisma = require('../prismaClient');
  */
 const getActivePeriod = async () => {
   const periodo = await prisma.periodo.findFirst({
-    where: { estado: 'activo' },
+    where: { estado: 1 },
     select: { id_periodo: true },
   });
 
@@ -41,7 +41,7 @@ const getPeriodos = async (req, res) => {
 const getActivePeriodRoute = async (req, res) => {
   try {
     const periodo = await prisma.periodo.findFirst({
-      where: { estado: 'activo' },
+      where: { estado: 1 },
     });
     if (!periodo) {
       return res.status(404).json({ message: 'No hay periodo escolar activo.' });
@@ -62,14 +62,15 @@ const createPeriodo = async (req, res) => {
   }
 
   try {
-    // Si se está creando un periodo como 'activo', debemos asegurar que los demás pasen a 'inactivo'
-    const isActivo = estado === 'activo';
+    // Si se está creando un periodo como 'activo' (1), debemos asegurar que los demás pasen a 'inactivo' (0)
+    let estadoNumerico = Number(estado);
+    const isActivo = estadoNumerico === 1;
 
     const nuevoPeriodo = await prisma.$transaction(async (tx) => {
       if (isActivo) {
         await tx.periodo.updateMany({
-          where: { estado: 'activo' },
-          data: { estado: 'inactivo' },
+          where: { estado: 1 },
+          data: { estado: 0 },
         });
       }
 
@@ -78,7 +79,7 @@ const createPeriodo = async (req, res) => {
           nombre_clave,
           fecha_inicio: new Date(fecha_inicio),
           fecha_final: new Date(fecha_final),
-          estado: isActivo ? 'activo' : 'inactivo',
+          estado: isActivo ? 1 : 0,
         },
       });
     });
@@ -103,18 +104,19 @@ const updatePeriodo = async (req, res) => {
     if (fecha_final) dataToUpdate.fecha_final = new Date(fecha_final);
 
     if (estado !== undefined) {
-      if (!['activo', 'inactivo'].includes(estado)) {
-        return res.status(400).json({ message: 'Estado inválido.' });
+      const estadoNumerico = Number(estado);
+      if (![1, 0].includes(estadoNumerico)) {
+        return res.status(400).json({ message: 'Estado inválido. Use 1 o 0.' });
       }
-      dataToUpdate.estado = estado;
+      dataToUpdate.estado = estadoNumerico;
     }
 
     const periodoActualizado = await prisma.$transaction(async (tx) => {
-      if (estado === 'activo') {
+      if (dataToUpdate.estado === 1) {
         // Desactivar a todos los que puedan estar activos
         await tx.periodo.updateMany({
-          where: { estado: 'activo' },
-          data: { estado: 'inactivo' },
+          where: { estado: 1 },
+          data: { estado: 0 },
         });
       }
 

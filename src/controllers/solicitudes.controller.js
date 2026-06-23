@@ -193,7 +193,7 @@ const updateSolicitud = async (req, res) => {
     }
 
     // Solo el solicitante o un admin pueden actualizar
-    if (existente.id_user_solicitante !== req.user.id_usuario && req.user.rol !== 'admin') {
+    if (existente.id_user_solicitante !== req.user.id_usuario && !['admin', 'coordinador'].includes(req.user.rol)) {
       return res.status(403).json({ message: 'No tienes permiso para modificar esta solicitud.' });
     }
 
