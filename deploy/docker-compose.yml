@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: solicitud_espacios
+      POSTGRES_PASSWORD: password_seguro_produccion
+      POSTGRES_DB: solicitud_espacios
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .. # El contexto es la raíz del proyecto
+      dockerfile: deploy/Dockerfile
+    container_name: node_api
+    restart: always
+    ports:
+      - "80:3000" # Mapeamos el puerto 80 del EC2 al 3000 del contenedor
+    environment:
+      # Conexión interna dentro de la red de Docker (apunta al servicio 'db')
+      DATABASE_URL: "postgresql://solicitud_espacios:password_seguro_produccion@db:5432/solicitud_espacios?schema=public"
+      JWT_SECRET: "cambia_este_secreto_por_algo_seguro_para_aws"
+      UPLOAD_DIR: "uploads/materiales"
+      PORT: 3000
+    depends_on:
+      - db
+    volumes:
+      # Persistencia de los archivos subidos por Multer
+      - uploads_data:/app/uploads
+    # Ejecutamos las migraciones y los seeds automáticamente al iniciar
+    command: /bin/sh -c "npx prisma db push --accept-data-loss && node prisma/seed.js && npm start"
+
+volumes:
+  pgdata: # Volumen para persistir los datos de la base de datos
+  uploads_data: # Volumen para persistir PDFs y PPTXs
