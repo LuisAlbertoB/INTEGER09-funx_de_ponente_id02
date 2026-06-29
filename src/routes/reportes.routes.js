@@ -32,7 +32,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/reportes
 router.post('/', async (req, res) => {
   try {
-    const nuevoReporte = await reportesService.createReporte(req.userId, req.body);
+    const nuevoReporte = await reportesService.createReporte(req.user.id_usuario, req.body);
     return res.status(201).json({ message: 'Reporte creado.', reporte: nuevoReporte });
   } catch (error) {
     console.error('Error en createReporte:', error);
@@ -45,7 +45,7 @@ router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return res.status(400).json({ message: 'ID inválido.' });
   try {
-    const reporte = await reportesService.updateReporte(req.userId, req.userRole, id, req.body);
+    const reporte = await reportesService.updateReporte(req.user.id_usuario, req.user.rol, id, req.body);
     return res.status(200).json({ message: 'Reporte actualizado.', reporte });
   } catch (error) {
     console.error('Error en updateReporte:', error);
@@ -58,7 +58,7 @@ router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return res.status(400).json({ message: 'ID inválido.' });
   try {
-    await reportesService.deleteReporte(req.userId, req.userRole, id);
+    await reportesService.deleteReporte(req.user.id_usuario, req.user.rol, id);
     return res.status(200).json({ message: 'Reporte eliminado correctamente.' });
   } catch (error) {
     console.error('Error en deleteReporte:', error);

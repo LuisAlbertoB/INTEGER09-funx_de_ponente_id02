@@ -8,7 +8,7 @@ router.use(verifyToken);
 // POST /api/eventos -> Crear evento/borrador
 router.post('/', async (req, res) => {
   try {
-    const evento = await eventosService.createEvento(req.userId, req.body);
+    const evento = await eventosService.createEvento(req.user.id_usuario, req.body);
     return res.status(201).json({ message: 'Evento creado.', evento });
   } catch (error) {
     return res.status(error.statusCode || 500).json({ message: error.message });
@@ -25,7 +25,7 @@ router.post('/:id/solicitar-espacio/:id_espacio', async (req, res) => {
   }
 
   try {
-    const solicitud = await eventosService.solicitarEspacio(req.userId, idEvento, idEspacio, req.body);
+    const solicitud = await eventosService.solicitarEspacio(req.user.id_usuario, idEvento, idEspacio, req.body);
     return res.status(201).json({ message: 'Solicitud enviada al dueño del espacio.', solicitud });
   } catch (error) {
     return res.status(error.statusCode || 500).json({ message: error.message });
@@ -51,7 +51,7 @@ router.post('/:id/foro', async (req, res) => {
   if (isNaN(id)) return res.status(400).json({ message: 'ID inválido.' });
   
   try {
-    const comentario = await eventosService.postComentarioForo(req.userId, id, req.body);
+    const comentario = await eventosService.postComentarioForo(req.user.id_usuario, id, req.body);
     return res.status(201).json({ message: 'Comentario publicado.', comentario });
   } catch (error) {
     return res.status(error.statusCode || 500).json({ message: error.message });
@@ -64,7 +64,7 @@ router.post('/:id/evaluacion', async (req, res) => {
   if (isNaN(id)) return res.status(400).json({ message: 'ID inválido.' });
   
   try {
-    const evaluacion = await eventosService.submitEvaluacion(req.userId, id, req.body);
+    const evaluacion = await eventosService.submitEvaluacion(req.user.id_usuario, id, req.body);
     return res.status(201).json({ message: 'Evaluación recibida con éxito.', evaluacion });
   } catch (error) {
     return res.status(error.statusCode || 500).json({ message: error.message });

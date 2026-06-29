@@ -30,7 +30,7 @@ const createReporte = async (userId, { titulo, descripcion, id_aula, id_mobiliar
   }
 
   // Obtener periodo activo automáticamente
-  const periodoActivo = await periodosService.getActivePeriod();
+  const periodoId = await periodosService.getActivePeriod();
 
   return reportesCtrl.create({
     titulo,
@@ -38,7 +38,7 @@ const createReporte = async (userId, { titulo, descripcion, id_aula, id_mobiliar
     id_user_reportante: userId,
     id_aula: Number(id_aula),
     id_mobiliario_afectado: id_mobiliario_afectado ? Number(id_mobiliario_afectado) : null,
-    id_periodo: periodoActivo.id_periodo
+    id_periodo: periodoId
   });
 };
 

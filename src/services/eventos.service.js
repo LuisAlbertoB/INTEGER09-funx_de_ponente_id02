@@ -10,17 +10,17 @@ const createEvento = async (userId, data) => {
     throw new AppError('El título y id_actividad son requeridos.', 400);
   }
 
-  const periodoActivo = await periodosService.getActivePeriod();
+  const periodoId = await periodosService.getActivePeriod();
 
   return eventosCtrl.createEvento({
     titulo,
     descripcion: descripcion || null,
     tematica: tematica || null,
     nivel_academico_objetivo: nivel_academico_objetivo || 'ambos',
-    id_ponente: userId, // El event manager / ponente que lo crea
+    id_ponente: userId,
     id_actividad: Number(id_actividad),
-    id_periodo: periodoActivo.id_periodo,
-    estado: 1 // 1: Activo/Borrador
+    id_periodo: periodoId,
+    estado: 1
   });
 };
 
@@ -38,7 +38,7 @@ const solicitarEspacio = async (userId, idEvento, idEspacio, data) => {
   const aula = await aulasCtrl.findById(idEspacio);
   if (!aula) throw new AppError('El espacio solicitado no existe.', 404);
 
-  const periodoActivo = await periodosService.getActivePeriod();
+  const periodoId = await periodosService.getActivePeriod();
 
   // Crea una solicitud tipo "normal" vinculada a la actividad del evento
   return eventosCtrl.createSolicitudEspacio({
@@ -49,7 +49,7 @@ const solicitarEspacio = async (userId, idEvento, idEspacio, data) => {
     estado: 'pendiente',
     id_user_solicitante: userId,
     id_aula: idEspacio,
-    id_periodo: periodoActivo.id_periodo,
+    id_periodo: periodoId,
     id_actividad: evento.id_actividad
   });
 };
