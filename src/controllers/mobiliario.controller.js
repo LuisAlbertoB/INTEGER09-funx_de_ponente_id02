@@ -1,16 +1,34 @@
 const prisma = require('../prismaClient');
 
-// GET /api/mobiliario
-const getMobiliario = async (req, res) => {
-  try {
-    const catalogo = await prisma.catalogoInmobiliario.findMany({
-      orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
-    });
-    return res.status(200).json(catalogo);
-  } catch (error) {
-    console.error('Error en getMobiliario:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+const findAll = async () => {
+  return prisma.catalogoInmobiliario.findMany({
+    orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
+  });
 };
 
-module.exports = { getMobiliario };
+const findById = async (id) => {
+  return prisma.catalogoInmobiliario.findUnique({ where: { id_inmobiliario: id } });
+};
+
+const findByNumSerie = async (num_de_serie) => {
+  return prisma.catalogoInmobiliario.findUnique({ where: { num_de_serie } });
+};
+
+const create = async (data) => {
+  return prisma.catalogoInmobiliario.create({ data });
+};
+
+const update = async (id, data) => {
+  return prisma.catalogoInmobiliario.update({
+    where: { id_inmobiliario: id },
+    data
+  });
+};
+
+const remove = async (id) => {
+  return prisma.catalogoInmobiliario.delete({
+    where: { id_inmobiliario: id }
+  });
+};
+
+module.exports = { findAll, findById, findByNumSerie, create, update, remove };

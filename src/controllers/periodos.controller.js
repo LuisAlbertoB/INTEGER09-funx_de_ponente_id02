@@ -1,142 +1,46 @@
 const prisma = require('../prismaClient');
 
-/**
- * Función interna compartida por otros controladores para obtener el ID del periodo activo
- * evitando redundancia de consultas en la base de datos para operaciones transaccionales.
- * 
- * @returns {Promise<number>} ID del periodo escolar activo
- * @throws {Error} Si no se encuentra un periodo activo configurado
- */
-const getActivePeriod = async () => {
+const findAll = async () => {
+  return prisma.periodo.findMany({
+    orderBy: { fecha_inicio: 'desc' },
+  });
+};
+
+const findActive = async () => {
+  return prisma.periodo.findFirst({
+    where: { estado: 1 },
+  });
+};
+
+const getActivePeriodId = async () => {
   const periodo = await prisma.periodo.findFirst({
     where: { estado: 1 },
     select: { id_periodo: true },
   });
-
-  if (!periodo) {
-    throw new Error('No hay un periodo escolar activo configurado en el sistema.');
-  }
-
-  return periodo.id_periodo;
+  return periodo ? periodo.id_periodo : null;
 };
 
-// ─── CONTROLADOR HTTP PARA PERIODOS ──────────────────────────────────────────
-
-// GET /api/periodos
-// Obtener todos los periodos históricos
-const getPeriodos = async (req, res) => {
-  try {
-    const periodos = await prisma.periodo.findMany({
-      orderBy: { fecha_inicio: 'desc' },
-    });
-    return res.status(200).json(periodos);
-  } catch (error) {
-    console.error('Error en getPeriodos:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+const create = async (data, tx = prisma) => {
+  return tx.periodo.create({ data });
 };
 
-// GET /api/periodos/active
-// Endpoint para que el cliente consulte qué periodo está en curso actual
-const getActivePeriodRoute = async (req, res) => {
-  try {
-    const periodo = await prisma.periodo.findFirst({
-      where: { estado: 1 },
-    });
-    if (!periodo) {
-      return res.status(404).json({ message: 'No hay periodo escolar activo.' });
-    }
-    return res.status(200).json(periodo);
-  } catch (error) {
-    console.error('Error en getActivePeriodRoute:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+const update = async (id, data, tx = prisma) => {
+  return tx.periodo.update({
+    where: { id_periodo: id },
+    data,
+  });
 };
 
-// POST /api/periodos
-const createPeriodo = async (req, res) => {
-  const { nombre_clave, fecha_inicio, fecha_final, estado } = req.body;
-
-  if (!nombre_clave || !fecha_inicio || !fecha_final) {
-    return res.status(400).json({ message: 'Faltan campos obligatorios.' });
-  }
-
-  try {
-    // Si se está creando un periodo como 'activo' (1), debemos asegurar que los demás pasen a 'inactivo' (0)
-    let estadoNumerico = Number(estado);
-    const isActivo = estadoNumerico === 1;
-
-    const nuevoPeriodo = await prisma.$transaction(async (tx) => {
-      if (isActivo) {
-        await tx.periodo.updateMany({
-          where: { estado: 1 },
-          data: { estado: 0 },
-        });
-      }
-
-      return await tx.periodo.create({
-        data: {
-          nombre_clave,
-          fecha_inicio: new Date(fecha_inicio),
-          fecha_final: new Date(fecha_final),
-          estado: isActivo ? 1 : 0,
-        },
-      });
-    });
-
-    return res.status(201).json({ message: 'Periodo creado.', periodo: nuevoPeriodo });
-  } catch (error) {
-    console.error('Error en createPeriodo:', error);
-    return res.status(500).json({ message: 'Error al crear el periodo escolar.' });
-  }
+const deactivateAll = async (tx = prisma) => {
+  return tx.periodo.updateMany({
+    where: { estado: 1 },
+    data: { estado: 0 },
+  });
 };
 
-// PUT /api/periodos/:id
-const updatePeriodo = async (req, res) => {
-  const { id } = req.params;
-  const { nombre_clave, fecha_inicio, fecha_final, estado } = req.body;
-
-  try {
-    const idPeriodo = Number(id);
-    const dataToUpdate = {};
-    if (nombre_clave) dataToUpdate.nombre_clave = nombre_clave;
-    if (fecha_inicio) dataToUpdate.fecha_inicio = new Date(fecha_inicio);
-    if (fecha_final) dataToUpdate.fecha_final = new Date(fecha_final);
-
-    if (estado !== undefined) {
-      const estadoNumerico = Number(estado);
-      if (![1, 0].includes(estadoNumerico)) {
-        return res.status(400).json({ message: 'Estado inválido. Use 1 o 0.' });
-      }
-      dataToUpdate.estado = estadoNumerico;
-    }
-
-    const periodoActualizado = await prisma.$transaction(async (tx) => {
-      if (dataToUpdate.estado === 1) {
-        // Desactivar a todos los que puedan estar activos
-        await tx.periodo.updateMany({
-          where: { estado: 1 },
-          data: { estado: 0 },
-        });
-      }
-
-      return await tx.periodo.update({
-        where: { id_periodo: idPeriodo },
-        data: dataToUpdate,
-      });
-    });
-
-    return res.status(200).json({ message: 'Periodo actualizado.', periodo: periodoActualizado });
-  } catch (error) {
-    console.error('Error en updatePeriodo:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+// Exponer prisma.$transaction para que los services puedan usarlo
+const transaction = async (fn) => {
+  return prisma.$transaction(fn);
 };
 
-module.exports = {
-  getActivePeriod, // Helper interno para transacciones
-  getPeriodos,
-  getActivePeriodRoute,
-  createPeriodo,
-  updatePeriodo
-};
+module.exports = { findAll, findActive, getActivePeriodId, create, update, deactivateAll, transaction };

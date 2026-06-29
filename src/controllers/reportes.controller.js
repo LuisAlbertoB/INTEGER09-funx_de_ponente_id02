@@ -1,27 +1,42 @@
 const prisma = require('../prismaClient');
 
-// GET /api/reportes
-const getReportes = async (req, res) => {
-  try {
-    const reportes = await prisma.reporte.findMany({
-      include: {
-        reportante: {
-          select: { id_usuario: true, nombre_completo: true, matricula: true },
-        },
-        aula: {
-          select: { id_aula: true, nombre_clave: true },
-        },
-        mobiliario: {
-          select: { id_inmobiliario: true, nombre: true, categoria: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return res.status(200).json(reportes);
-  } catch (error) {
-    console.error('Error en getReportes:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+const findAll = async () => {
+  return prisma.reporte.findMany({
+    include: {
+      reportante: { select: { id_usuario: true, nombre_completo: true } },
+      aula: { select: { id_aula: true, nombre_clave: true } },
+      mobiliario: { select: { id_inmobiliario: true, nombre: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
 };
 
-module.exports = { getReportes };
+const findById = async (id) => {
+  return prisma.reporte.findUnique({
+    where: { id_reporte: id },
+    include: {
+      reportante: { select: { id_usuario: true, nombre_completo: true } },
+      aula: { select: { id_aula: true, nombre_clave: true } },
+      mobiliario: { select: { id_inmobiliario: true, nombre: true } },
+    }
+  });
+};
+
+const create = async (data) => {
+  return prisma.reporte.create({ data });
+};
+
+const update = async (id, data) => {
+  return prisma.reporte.update({
+    where: { id_reporte: id },
+    data
+  });
+};
+
+const remove = async (id) => {
+  return prisma.reporte.delete({
+    where: { id_reporte: id }
+  });
+};
+
+module.exports = { findAll, findById, create, update, remove };

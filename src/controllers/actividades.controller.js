@@ -1,24 +1,38 @@
 const prisma = require('../prismaClient');
 
-// GET /api/actividades
-// Obtener el catálogo de actividades únicas existentes para el Dropdown
-const getActividades = async (req, res) => {
-  try {
-    const actividades = await prisma.actividad.findMany({
-      orderBy: { titulo_actividad: 'asc' },
-      select: {
-        id_actividad: true,
-        titulo_actividad: true,
-        subtitulo_actividad: true,
-        descripcion: true
-      }
-    });
-
-    return res.status(200).json(actividades);
-  } catch (error) {
-    console.error('Error en getActividades:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+const findAll = async () => {
+  return prisma.actividad.findMany({
+    orderBy: { titulo_actividad: 'asc' },
+    select: {
+      id_actividad: true,
+      titulo_actividad: true,
+      subtitulo_actividad: true,
+      descripcion: true
+    }
+  });
 };
 
-module.exports = { getActividades };
+const findById = async (id) => {
+  return prisma.actividad.findUnique({
+    where: { id_actividad: id }
+  });
+};
+
+const create = async (data) => {
+  return prisma.actividad.create({ data });
+};
+
+const update = async (id, data) => {
+  return prisma.actividad.update({
+    where: { id_actividad: id },
+    data
+  });
+};
+
+const remove = async (id) => {
+  return prisma.actividad.delete({
+    where: { id_actividad: id }
+  });
+};
+
+module.exports = { findAll, findById, create, update, remove };

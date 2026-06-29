@@ -15,8 +15,6 @@ enum Rol {
   usuario_general
 }
 
-
-
 enum EstadoSolicitud {
   pendiente
   aprobada
@@ -72,7 +70,7 @@ model Usuario {
   matricula       String   @unique @db.VarChar(50)
   contrasena      String   @db.VarChar(255)
   rol             Rol      @default(usuario_general)
-  estado          Int   @default(1)
+  estado          Int      @default(1)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -87,6 +85,9 @@ model Usuario {
   reportes                Reporte[]               @relation("ReportanteReporte")
   conferencias            Conferencia[]           @relation("PonenteConferencia")
   feedbacks               FeedbackAsistente[]     @relation("UsuarioFeedback")
+  aulasPropias            Aula[]                  @relation("AulaOwner")
+  comentariosForo         ComentarioForo[]        @relation("UsuarioForo")
+  evaluacionesEventos     EvaluacionEvento[]      @relation("UsuarioEvaluacion")
 
   @@map("usuarios")
 }
@@ -97,7 +98,7 @@ model Usuario {
 model Edificio {
   id_edificio  Int      @id @default(autoincrement())
   nombre_clave String   @db.VarChar(100)
-  estado       Int   @default(1)
+  estado       Int      @default(1)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -112,18 +113,21 @@ model Edificio {
 model Aula {
   id_aula      Int      @id @default(autoincrement())
   nombre_clave String   @db.VarChar(100)
-  estado       Int   @default(1)
+  estado       Int      @default(1)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   id_edificio Int
   edificio    Edificio @relation(fields: [id_edificio], references: [id_edificio])
 
-  solicitudes    Solicitud[]             @relation("AulaSolicitud")
-  reportes       Reporte[]               @relation("AulaReporte")
-  mantenimientos BitacoraMantenimiento[] @relation("AulaMantenimiento")
+  id_owner Int?
+  owner    Usuario? @relation("AulaOwner", fields: [id_owner], references: [id_usuario])
+
+  solicitudes    Solicitud[]                        @relation("AulaSolicitud")
+  reportes       Reporte[]                          @relation("AulaReporte")
+  mantenimientos BitacoraMantenimiento[]            @relation("AulaMantenimiento")
   inventarioBase AulaHasMobiliarioInfraestructura[]
-  conferencias   Conferencia[]           @relation("AulaConferencia")
+  conferencias   Conferencia[]                      @relation("AulaConferencia")
 
   @@map("aulas")
 }
@@ -141,9 +145,9 @@ model CatalogoInmobiliario {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  solicitudesInmobiliario SolicitudInmobiliario[]       @relation("InmobiliarioSolicitud")
-  reportes                Reporte[]                     @relation("InmobiliarioReporte")
-  mantenimientos          BitacoraMantenimiento[]       @relation("InmobiliarioMantenimiento")
+  solicitudesInmobiliario SolicitudInmobiliario[]            @relation("InmobiliarioSolicitud")
+  reportes                Reporte[]                          @relation("InmobiliarioReporte")
+  mantenimientos          BitacoraMantenimiento[]            @relation("InmobiliarioMantenimiento")
   aulasAsignadas          AulaHasMobiliarioInfraestructura[]
 
   @@map("mobiliario")
@@ -157,7 +161,7 @@ model Periodo {
   nombre_clave String   @db.VarChar(100)
   fecha_inicio DateTime
   fecha_final  DateTime
-  estado       Int   @default(1)
+  estado       Int      @default(1)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -272,7 +276,7 @@ model AulaHasMobiliarioInfraestructura {
   id_aula                                Int
   id_mobiliario                          Int
   cantidad_en_aula                       Int @default(0)
-  
+
   aula       Aula                 @relation(fields: [id_aula], references: [id_aula], onDelete: Cascade)
   mobiliario CatalogoInmobiliario @relation(fields: [id_mobiliario], references: [id_inmobiliario])
 
@@ -313,14 +317,14 @@ model Reporte {
 // 12. BITACORA_MANTENIMIENTO 
 // ------------------------------------------------------------
 model BitacoraMantenimiento {
-  id_bitacora_mantenimiento Int      @id @default(autoincrement())
+  id_bitacora_mantenimiento Int       @id @default(autoincrement())
   fecha_inicio              DateTime
   fecha_final               DateTime?
-  accion_realizada          String   @db.VarChar(200)
-  descripcion               String?  @db.Text
-  realizado_por             String?  @db.VarChar(150)
-  createdAt                 DateTime @default(now()) @map("created_at")
-  updatedAt                 DateTime @updatedAt @map("updated_at")
+  accion_realizada          String    @db.VarChar(200)
+  descripcion               String?   @db.Text
+  realizado_por             String?   @db.VarChar(150)
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
 
   // Relaciones
   id_mobiliario Int
@@ -348,21 +352,23 @@ model Conferencia {
   fecha_realizada          DateTime?
   estado                   Int            @default(1)
 
-  id_ponente        Int
-  ponente           Usuario   @relation("PonenteConferencia", fields: [id_ponente], references: [id_usuario])
+  id_ponente Int
+  ponente    Usuario @relation("PonenteConferencia", fields: [id_ponente], references: [id_usuario])
 
-  id_actividad      Int
-  actividad         Actividad @relation(fields: [id_actividad], references: [id_actividad])
+  id_actividad Int
+  actividad    Actividad @relation(fields: [id_actividad], references: [id_actividad])
 
   id_aula_utilizada Int?
-  aula              Aula?     @relation("AulaConferencia", fields: [id_aula_utilizada], references: [id_aula])
+  aula              Aula? @relation("AulaConferencia", fields: [id_aula_utilizada], references: [id_aula])
 
-  id_periodo        Int
-  periodo           Periodo   @relation(fields: [id_periodo], references: [id_periodo])
+  id_periodo Int
+  periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
 
-  materiales        MaterialDeApoyo[]
-  registroEvento    RegistroEvento?
-  feedbacks         FeedbackAsistente[]
+  materiales      MaterialDeApoyo[]
+  registroEvento  RegistroEvento?
+  feedbacks       FeedbackAsistente[]
+  comentariosForo ComentarioForo[]    @relation("EventoForo")
+  evaluaciones    EvaluacionEvento[]  @relation("EventoEvaluacion")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -382,7 +388,7 @@ model MaterialDeApoyo {
   publico            Boolean      @default(true)
 
   id_conferencia Int
-  conferencia    Conferencia  @relation(fields: [id_conferencia], references: [id_conferencia])
+  conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -413,13 +419,13 @@ model RegistroEvento {
 // 15. FEEDBACK ASISTENTE (Motor ML)
 // ------------------------------------------------------------
 model FeedbackAsistente {
-  id_feedback              Int                @id @default(autoincrement())
-  
+  id_feedback Int @id @default(autoincrement())
+
   // Perfil
-  nivel_academico          NivelAcademico
-  especialidad             String?            @db.VarChar(150)
-  genero                   Genero             @default(prefiero_no_decir)
-  
+  nivel_academico NivelAcademico
+  especialidad    String?        @db.VarChar(150)
+  genero          Genero         @default(prefiero_no_decir)
+
   // Engagement
   duracion_interaccion_min Int                @default(0)
   total_interacciones      Int                @default(0)
@@ -427,24 +433,65 @@ model FeedbackAsistente {
   porcentaje_aciertos      Decimal            @default(0) @db.Decimal(5, 2)
   calificacion             Decimal            @default(0) @db.Decimal(4, 2)
   participation_level      ParticipationLevel @default(pasivo)
-  
+
   // NLP & Sentiment
-  sentimiento_general      SentimientoGeneral @default(neutral)
-  score_logistica          Int                @default(3)
-  score_contenido          Int                @default(3)
-  comentario_escrito       String?            @db.Text
-  
+  sentimiento_general SentimientoGeneral @default(neutral)
+  score_logistica     Int                @default(3)
+  score_contenido     Int                @default(3)
+  comentario_escrito  String?            @db.Text
+
   // Metadatos
-  fuente                   String             @default("sistema") @db.VarChar(50)
+  fuente String @default("sistema") @db.VarChar(50)
 
   // Relaciones
   id_conferencia Int
   conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
 
-  id_usuario     Int?
-  usuario        Usuario?    @relation("UsuarioFeedback", fields: [id_usuario], references: [id_usuario])
+  id_usuario Int?
+  usuario    Usuario? @relation("UsuarioFeedback", fields: [id_usuario], references: [id_usuario])
 
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("feedbacks_asistentes")
+}
+
+// ------------------------------------------------------------
+// 16. COMENTARIO FORO (Live Discussion)
+// ------------------------------------------------------------
+model ComentarioForo {
+  id_comentario Int      @id @default(autoincrement())
+  mensaje       String   @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  id_evento Int
+  evento    Conferencia @relation("EventoForo", fields: [id_evento], references: [id_conferencia])
+
+  id_usuario Int
+  usuario    Usuario @relation("UsuarioForo", fields: [id_usuario], references: [id_usuario])
+
+  id_comentario_padre Int?
+  comentarioPadre     ComentarioForo?  @relation("ComentarioHijos", fields: [id_comentario_padre], references: [id_comentario])
+  respuestas          ComentarioForo[] @relation("ComentarioHijos")
+
+  @@map("comentarios_foro")
+}
+
+// ------------------------------------------------------------
+// 17. EVALUACION EVENTO (Post-Event NLP Data)
+// ------------------------------------------------------------
+model EvaluacionEvento {
+  id_evaluacion           Int      @id @default(autoincrement())
+  calificacion            Decimal  @db.Decimal(2, 1) // 0.0 a 5.0
+  porcentaje_satisfaccion Int // 0 a 100
+  comentario_escrito      String?  @db.Text
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  id_evento Int
+  evento    Conferencia @relation("EventoEvaluacion", fields: [id_evento], references: [id_conferencia])
+
+  id_usuario Int
+  usuario    Usuario @relation("UsuarioEvaluacion", fields: [id_usuario], references: [id_usuario])
+
+  @@unique([id_evento, id_usuario])
+  @@map("evaluaciones_eventos")
 }

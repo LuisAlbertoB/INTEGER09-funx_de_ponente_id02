@@ -1,21 +1,36 @@
 const prisma = require('../prismaClient');
 
-// GET /api/aulas
-const getAulas = async (req, res) => {
-  try {
-    const aulas = await prisma.aula.findMany({
-      include: {
-        edificio: {
-          select: { id_edificio: true, nombre_clave: true },
-        },
+const findAll = async () => {
+  return prisma.aula.findMany({
+    include: {
+      edificio: {
+        select: { id_edificio: true, nombre_clave: true },
       },
-      orderBy: { nombre_clave: 'asc' },
-    });
-    return res.status(200).json(aulas);
-  } catch (error) {
-    console.error('Error en getAulas:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+    },
+    orderBy: { nombre_clave: 'asc' },
+  });
 };
 
-module.exports = { getAulas };
+const findById = async (id) => {
+  return prisma.aula.findUnique({ where: { id_aula: id } });
+};
+
+const create = async (data) => {
+  return prisma.aula.create({ data });
+};
+
+const update = async (id, data) => {
+  return prisma.aula.update({
+    where: { id_aula: id },
+    data
+  });
+};
+
+const softDelete = async (id) => {
+  return prisma.aula.update({
+    where: { id_aula: id },
+    data: { estado: 0 }
+  });
+};
+
+module.exports = { findAll, findById, create, update, softDelete };

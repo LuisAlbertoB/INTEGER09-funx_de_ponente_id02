@@ -1,17 +1,35 @@
 const prisma = require('../prismaClient');
 
-// GET /api/edificios
-const getEdificios = async (req, res) => {
-  try {
-    const edificios = await prisma.edificio.findMany({
-      include: { aulas: true },
-      orderBy: { nombre_clave: 'asc' },
-    });
-    return res.status(200).json(edificios);
-  } catch (error) {
-    console.error('Error en getEdificios:', error);
-    return res.status(500).json({ message: 'Error interno del servidor.' });
-  }
+const findAll = async () => {
+  return prisma.edificio.findMany({
+    include: { aulas: true },
+    orderBy: { nombre_clave: 'asc' },
+  });
 };
 
-module.exports = { getEdificios };
+const findById = async (id) => {
+  return prisma.edificio.findUnique({
+    where: { id_edificio: id },
+    include: { aulas: true }
+  });
+};
+
+const create = async (data) => {
+  return prisma.edificio.create({ data });
+};
+
+const update = async (id, data) => {
+  return prisma.edificio.update({
+    where: { id_edificio: id },
+    data
+  });
+};
+
+const softDelete = async (id) => {
+  return prisma.edificio.update({
+    where: { id_edificio: id },
+    data: { estado: 0 }
+  });
+};
+
+module.exports = { findAll, findById, create, update, softDelete };
