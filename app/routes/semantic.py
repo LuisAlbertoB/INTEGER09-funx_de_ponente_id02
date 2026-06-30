@@ -6,8 +6,8 @@ Recibe una consulta, la convierte en un vector, y busca en FAISS
 los eventos más similares (por título y descripción).
 """
 
-from fastapi import APIRouter
-from app.schemas import IndexEventRequest, SemanticSearchRequest, SemanticSearchResponse, SearchResult
+from fastapi import APIRouter, HTTPException
+from app.schemas import IndexEventRequest, SemanticSearchRequest, SemanticSearchResponse, SearchResult, RecommendEventRequest, RecommendResponse
 from app.core.models import get_semantic_model
 from app.core.vector_store import vector_store
 
@@ -60,5 +60,28 @@ async def buscar_eventos(req: SemanticSearchRequest):
     
     return SemanticSearchResponse(
         query=req.query,
+        resultados=resultados_schema
+    )
+
+
+@router.post(
+    "/recomendaciones",
+    response_model=RecommendResponse,
+    summary="Recomendar eventos basados en el historial",
+    description="Recibe una lista de IDs de eventos que le interesan al usuario, calcula el promedio y busca eventos afines."
+)
+async def recomendar_eventos(req: RecommendEventRequest):
+    if not req.history_ids:
+        raise HTTPException(status_code=400, detail="El historial no puede estar vacío.")
+        
+    resultados = vector_store.search_by_history(req.history_ids, top_k=req.top_k)
+    
+    resultados_schema = [
+        SearchResult(id_evento=r["id_evento"], score=r["score"])
+        for r in resultados
+    ]
+    
+    return RecommendResponse(
+        history_ids=req.history_ids,
         resultados=resultados_schema
     )

@@ -86,7 +86,6 @@ class VectorStore:
         for i, faiss_id in enumerate(indices[0]):
             if faiss_id != -1 and faiss_id in self.id_mapping:
                 # Distancia L2 normalizada: menor es mejor (0 es idéntico)
-                # Convertimos a un 'score' intuitivo (1.0 es perfecto)
                 score = 1.0 - (distances[0][i] / 2.0)  
                 results.append({
                     "id_evento": self.id_mapping[faiss_id],
@@ -94,6 +93,41 @@ class VectorStore:
                 })
                 
         return results
+
+    def get_event_embedding(self, event_id: int):
+        """Obtiene el embedding de un evento dado su ID."""
+        for faiss_id, eid in self.id_mapping.items():
+            if eid == event_id:
+                # FAISS puede reconstruir vectores si el índice lo soporta,
+                # pero IndexFlatL2 guarda los vectores en memoria cruda.
+                return self.index.reconstruct(faiss_id)
+        return None
+
+    def search_by_history(self, event_ids: list[int], top_k: int = 5):
+        """
+        Recibe el historial de eventos del usuario.
+        Calcula el vector promedio de esos eventos y busca recomendaciones.
+        """
+        embeddings = []
+        for eid in event_ids:
+            emb = self.get_event_embedding(eid)
+            if emb is not None:
+                embeddings.append(emb)
+                
+        if not embeddings:
+            return []
+            
+        # Calcular vector promedio (centroide de los intereses del usuario)
+        avg_embedding = np.mean(embeddings, axis=0).reshape(1, -1)
+        
+        # Buscar
+        # Buscamos más resultados por si los primeros coinciden con el historial
+        raw_results = self.search(avg_embedding, top_k=top_k + len(event_ids))
+        
+        # Filtrar los eventos que ya están en el historial
+        filtered_results = [r for r in raw_results if r["id_evento"] not in event_ids]
+        
+        return filtered_results[:top_k]
 
 # Singleton
 vector_store = VectorStore()

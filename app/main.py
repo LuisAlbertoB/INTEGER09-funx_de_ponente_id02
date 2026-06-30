@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.models import load_models
-from app.routes import ner, sentiment, health, semantic
+from app.routes import ner, sentiment, health, semantic, clustering
 
 
 # ── Lifespan: carga modelos al arrancar, libera al apagar ──────────────
@@ -57,3 +57,4 @@ app.include_router(health.router)
 app.include_router(ner.router)
 app.include_router(sentiment.router)
 app.include_router(semantic.router)
+app.include_router(clustering.router)

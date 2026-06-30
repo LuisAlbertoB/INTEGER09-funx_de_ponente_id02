@@ -77,6 +77,11 @@ class SemanticSearchRequest(BaseModel):
     )
     top_k: int = Field(default=5, ge=1, le=20)
 
+class RecommendEventRequest(BaseModel):
+    """Solicita recomendaciones basadas en el historial."""
+    history_ids: list[int]
+    top_k: int = Field(default=3, ge=1, le=10)
+
 class SearchResult(BaseModel):
     """Resultado individual de búsqueda."""
     id_evento: int
@@ -86,6 +91,34 @@ class SemanticSearchResponse(BaseModel):
     """Respuesta de búsqueda semántica."""
     query: str
     resultados: list[SearchResult]
+
+class RecommendResponse(BaseModel):
+    """Respuesta de recomendaciones."""
+    history_ids: list[int]
+    resultados: list[SearchResult]
+
+# ══════════════════════════════════════════════════════════════════════════
+#  Clustering de Reportes
+# ══════════════════════════════════════════════════════════════════════════
+
+class ReporteItem(BaseModel):
+    """Un reporte individual para agrupar."""
+    id_reporte: int
+    texto: str
+
+class ClusterRequest(BaseModel):
+    """Solicitud para agrupar reportes."""
+    reportes: list[ReporteItem]
+
+class ClusterResult(BaseModel):
+    """El cluster asignado a un reporte."""
+    id_reporte: int
+    cluster_id: int
+
+class ClusterResponse(BaseModel):
+    """Respuesta con los grupos formados."""
+    total_clusters: int
+    resultados: list[ClusterResult]
 
 # ══════════════════════════════════════════════════════════════════════════
 #  Health Check
