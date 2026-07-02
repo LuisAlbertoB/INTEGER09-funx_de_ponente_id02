@@ -21,6 +21,27 @@ Nuestro algoritmo **lee los reportes, los convierte a vectores matemáticos y lo
 
 ---
 
+## 🧮 Fundamentos Matemáticos del Servicio
+
+Para lograr que la Inteligencia Artificial "entienda" y agrupe los textos, el microservicio implementa una serie de transformaciones matemáticas sobre el lenguaje natural:
+
+### 1. Vectorización (Embeddings) en $\mathbb{R}^d$
+El texto libre no puede procesarse aritméticamente. Utilizando el modelo de *Sentence-Transformers*, mapeamos cada oración (ej. un reporte de mantenimiento) a un espacio vectorial denso de alta dimensionalidad (típicamente $d = 384$ o $d = 768$). 
+Cada texto $T_i$ se convierte en un vector $\mathbf{v}_i \in \mathbb{R}^d$.
+
+### 2. Similitud del Coseno (Búsqueda Vectorial)
+Para buscar eventos semánticamente idénticos (incluso si no usan las mismas palabras), utilizamos la métrica de Similitud del Coseno entre el vector de búsqueda $\mathbf{A}$ y los vectores de la base de datos $\mathbf{B}$ almacenados en FAISS:
+$$ \text{Similitud}(\mathbf{A}, \mathbf{B}) = \cos(\theta) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+Un valor cercano a `1` indica que los textos significan lo mismo.
+
+### 3. Clustering Aglomerativo (Ward's Linkage)
+Para agrupar los reportes de daño de forma no supervisada, el algoritmo inicializa cada reporte como su propio clúster y luego los fusiona iterativamente.
+Utilizamos el criterio de varianza mínima de Ward. En cada paso, se unen los dos clústeres $A$ y $B$ que minimicen el incremento de la suma de errores cuadráticos (Sum of Squared Errors, SSE) tras la fusión:
+$$ \Delta(A, B) = \sum_{x \in A \cup B} \|x - m_{A \cup B}\|^2 - \sum_{x \in A} \|x - m_A\|^2 - \sum_{x \in B} \|x - m_B\|^2 $$
+donde $m$ es el centroide (vector promedio) del clúster. Esto garantiza agrupaciones densas y temáticamente coherentes.
+
+---
+
 ## ⚙️ Cumplimiento de Requisitos del Microservicio
 
 El microservicio expone una API REST completa y cumple estrictamente con los lineamientos del hito:
