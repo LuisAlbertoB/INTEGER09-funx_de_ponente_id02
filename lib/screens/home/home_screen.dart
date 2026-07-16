@@ -4,12 +4,13 @@ import '../../providers/auth_provider.dart';
 import '../../services/catalogo_service.dart';
 import '../ponente/conferencias_screen.dart';
 import '../admin/admin_usuarios_screen.dart';
-import '../admin/admin_reportes_screen.dart'; // NEW
+import '../admin/admin_reportes_screen.dart';
 import '../catalogo/infraestructura_screen.dart';
 import '../catalogo/periodos_screen.dart';
-import '../catalogo/catalogo_eventos_screen.dart'; // NEW
-import '../events/recomendados_screen.dart'; // NEW
+import '../catalogo/catalogo_eventos_screen.dart';
+import '../events/recomendados_screen.dart';
 import '../profile/profile_screen.dart';
+import '../qr/qr_scanner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -180,6 +181,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+        ),
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Escanear QR'),
+        backgroundColor: Colors.deepPurple,
       ),
     );
   }

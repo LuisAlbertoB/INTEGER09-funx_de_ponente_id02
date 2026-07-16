@@ -12,7 +12,8 @@ class ApiConstants {
   // Ponente - Conferencias
   static const String conferencias = '/api/ponente/conferencias';
   static String conferenciaById(int id) => '/api/ponente/conferencias/$id';
-  static String materialesConferencia(int id) => '/api/ponente/conferencias/$id/materiales';
+  static String materialesConferencia(int id) =>
+      '/api/ponente/conferencias/$id/materiales';
 
   // Catálogos
   static const String actividades = '/api/actividades';
@@ -20,12 +21,18 @@ class ApiConstants {
   static const String periodosActive = '/api/periodos/active';
   static const String edificios = '/api/edificios';
   static const String aulas = '/api/aulas';
-  
+
   // Catálogo General (IA Semántica)
   static const String catalogoEventos = '/api/catalogo/eventos';
 
   // Recomendaciones (IA)
   static const String recomendaciones = '/api/eventos/recomendados';
+
+  // Eventos — Foro, Evaluación y Espacio
+  static String eventoForo(int id) => '/api/eventos/$id/foro';
+  static String eventoEvaluacion(int id) => '/api/eventos/$id/evaluacion';
+  static String eventoEspacio(int idEvento, int idEspacio) =>
+      '/api/eventos/$idEvento/solicitar-espacio/$idEspacio';
 
   // Reportes y Clustering (IA)
   static const String clusteringReportes = '/api/reportes/clustering';

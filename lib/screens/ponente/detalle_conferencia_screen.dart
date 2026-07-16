@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/models/conferencia_model.dart';
 import '../../services/ponente_service.dart';
+import '../eventos/foro_evento_screen.dart';
+import '../eventos/solicitar_espacio_screen.dart';
+import '../qr/qr_asistencia_screen.dart';
 import 'editar_conferencia_screen.dart';
 
 class DetalleConferenciaScreen extends StatefulWidget {
@@ -8,14 +11,12 @@ class DetalleConferenciaScreen extends StatefulWidget {
   const DetalleConferenciaScreen({super.key, required this.conferencia});
 
   @override
-  State<DetalleConferenciaScreen> createState() => _DetalleConferenciaScreenState();
+  State<DetalleConferenciaScreen> createState() =>
+      _DetalleConferenciaScreenState();
 }
 
 class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
   final _service = PonenteService();
-  bool _uploading = false;
-  final _tituloMaterialCtrl = TextEditingController();
-  String _tipoArchivo = 'pdf';
 
   Widget _row(String label, String value) {
     return Padding(
@@ -25,51 +26,49 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
         children: [
           SizedBox(
             width: 140,
-            child: Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+            child: Text(label,
+                style: const TextStyle(
+                    color: Colors.grey, fontWeight: FontWeight.w500)),
           ),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+          Expanded(
+              child: Text(value,
+                  style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );
   }
 
-  void _showUploadDialog() {
-    _tituloMaterialCtrl.clear();
-    _tipoArchivo = 'pdf';
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Subir Material'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _tituloMaterialCtrl,
-                decoration: const InputDecoration(labelText: 'Título del material', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _tipoArchivo,
-                decoration: const InputDecoration(labelText: 'Tipo de archivo', border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'pdf', child: Text('PDF')),
-                  DropdownMenuItem(value: 'pptx', child: Text('PPTX')),
-                  DropdownMenuItem(value: 'docx', child: Text('DOCX')),
-                ],
-                onChanged: (v) => setDialogState(() => _tipoArchivo = v!),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Nota: La subida de archivos desde el celular requiere el paquete file_picker. '
-                'Por ahora, usa Postman para subir materiales al servidor.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
-          ],
+  void _navegarQR() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QrAsistenciaScreen(
+          idConferencia: widget.conferencia.idConferencia,
+          tituloEvento: widget.conferencia.titulo,
+        ),
+      ),
+    );
+  }
+
+  void _navegarForo() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForoEventoScreen(
+          idEvento: widget.conferencia.idConferencia,
+          tituloEvento: widget.conferencia.titulo,
+        ),
+      ),
+    );
+  }
+
+  void _navegarSolicitarEspacio() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SolicitarEspacioScreen(
+          idEvento: widget.conferencia.idConferencia,
+          tituloEvento: widget.conferencia.titulo,
         ),
       ),
     );
@@ -80,10 +79,11 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
     final c = widget.conferencia;
     return Scaffold(
       appBar: AppBar(
-        title: Text(c.titulo),
+        title: Text(c.titulo, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Editar',
             onPressed: () async {
               final updated = await Navigator.push<bool>(
                 context,
@@ -98,63 +98,135 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
                   ),
                 ),
               );
-              if (updated == true && mounted) {
-                Navigator.pop(context, true);
-              }
+              if (updated == true && mounted) Navigator.pop(context, true);
             },
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showUploadDialog,
-        icon: const Icon(Icons.upload_file),
-        label: const Text('Material'),
-        backgroundColor: Colors.deepPurple,
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Acciones rápidas ────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _accionBtn(
+                    icon: Icons.qr_code_rounded,
+                    label: 'QR Asistencia',
+                    color: Colors.deepPurple,
+                    onTap: _navegarQR,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _accionBtn(
+                    icon: Icons.forum_outlined,
+                    label: 'Comunidad',
+                    color: Colors.teal,
+                    onTap: _navegarForo,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _accionBtn(
+                    icon: Icons.meeting_room_outlined,
+                    label: 'Pedir Aula',
+                    color: Colors.orange,
+                    onTap: _navegarSolicitarEspacio,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Información General ──────────────────────────────────────
             Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Información General', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('Información General',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     const Divider(),
                     _row('Título', c.titulo),
-                    if (c.descripcion != null) _row('Descripción', c.descripcion!),
+                    if (c.descripcion != null)
+                      _row('Descripción', c.descripcion!),
                     if (c.tematica != null) _row('Temática', c.tematica!),
                     _row('Nivel objetivo', c.nivelAcademicoObjetivo),
                     _row('Duración estimada', '${c.duracionEstimadaMin} min'),
-                    _row('Estado', c.estado == 1 ? 'Activa' : 'Inactiva'),
+                    _row('Estado', c.estado == 1 ? '🟢 Activa' : '🔴 Inactiva'),
                     _row('ID Actividad', '${c.idActividad}'),
                     _row('ID Periodo', '${c.idPeriodo}'),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // ── Materiales ───────────────────────────────────────────────
             Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Materiales de Apoyo', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('Materiales de Apoyo',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     const Divider(),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'Presiona el botón "Material" para subir archivos de apoyo (PDF, PPTX).',
-                        style: TextStyle(color: Colors.grey),
+                        'Usa el servidor o Postman para subir PDF, PPTX y otros archivos a esta conferencia.',
+                        style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _accionBtn({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                  color: color, fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

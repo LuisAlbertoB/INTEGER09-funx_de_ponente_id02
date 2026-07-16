@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/catalogo_service.dart';
+import '../qr/qr_landing_screen.dart';
 
 class CatalogoEventosScreen extends StatefulWidget {
   const CatalogoEventosScreen({super.key});
@@ -170,7 +171,19 @@ class _CatalogoEventosScreenState extends State<CatalogoEventosScreen> {
             ),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              // TODO: Navegar a detalles del evento si existe la pantalla
+              final id = evento['id_conferencia'] as int?;
+              final titulo = (evento['titulo'] as String?) ?? 'Evento';
+              if (id != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => QrLandingScreen(
+                      idConferencia: id,
+                      tituloEvento: titulo,
+                    ),
+                  ),
+                );
+              }
             },
           ),
         );
