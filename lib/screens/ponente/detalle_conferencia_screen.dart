@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../data/models/conferencia_model.dart';
 import '../../services/ponente_service.dart';
 import '../eventos/foro_evento_screen.dart';
@@ -78,107 +77,28 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
 
   // ── Subida de materiales real usando file_picker + multipart ───────────
   Future<void> _subirMaterial() async {
-    // 1. Mostrar diálogo para capturar el título y tipo antes de seleccionar archivo
-    String titulo = '';
-    String tipo = 'pdf';
-
-    final confirmed = await showDialog<bool>(
+    showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Subir Material de Apoyo'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Título del material *',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (v) => titulo = v.trim(),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: tipo,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de archivo',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'pdf', child: Text('PDF')),
-                  DropdownMenuItem(value: 'pptx', child: Text('PowerPoint')),
-                  DropdownMenuItem(value: 'video', child: Text('Video')),
-                  DropdownMenuItem(value: 'imagen', child: Text('Imagen')),
-                  DropdownMenuItem(value: 'otro', child: Text('Otro')),
-                ],
-                onChanged: (v) => setDialogState(() => tipo = v!),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: titulo.isNotEmpty
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              style: FilledButton.styleFrom(
-                  backgroundColor: Colors.deepPurple),
-              child: const Text('Seleccionar archivo'),
-            ),
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.deepPurple),
+            SizedBox(width: 8),
+            Text('Aviso'),
           ],
         ),
+        content: const Text(
+          'La subida de archivos pesados (PDF, PPTX, Videos) está optimizada para la versión de escritorio.\n\nPor favor, ingresa al portal web de UniEvents desde tu computadora para adjuntar los materiales de tu conferencia.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: FilledButton.styleFrom(backgroundColor: Colors.deepPurple),
+            child: const Text('Entendido'),
+          ),
+        ],
       ),
     );
-
-    if (confirmed != true || !mounted) return;
-
-    // 2. Abrir el selector de archivos nativo del dispositivo
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      type: FileType.any,
-    );
-
-    if (result == null || result.files.single.path == null) return;
-    if (!mounted) return;
-
-    final filePath = result.files.single.path!;
-
-    setState(() => _uploading = true);
-
-    try {
-      // 3. Llamar al servicio existente (multipart/form-data al servidor)
-      await _service.uploadMaterial(
-        idConferencia: widget.conferencia.idConferencia,
-        tituloMaterial: titulo,
-        tipoArchivo: tipo,
-        filePath: filePath,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Material subido exitosamente.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '❌ ${e.toString().replaceFirst('Exception: ', '')}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
   }
 
   @override
