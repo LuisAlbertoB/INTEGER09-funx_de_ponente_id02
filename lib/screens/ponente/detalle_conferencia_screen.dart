@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../data/models/conferencia_model.dart';
 import '../../services/ponente_service.dart';
 import '../eventos/foro_evento_screen.dart';
@@ -17,6 +18,7 @@ class DetalleConferenciaScreen extends StatefulWidget {
 
 class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
   final _service = PonenteService();
+  bool _uploading = false;
 
   Widget _row(String label, String value) {
     return Padding(
@@ -72,6 +74,111 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
         ),
       ),
     );
+  }
+
+  // ── Subida de materiales real usando file_picker + multipart ───────────
+  Future<void> _subirMaterial() async {
+    // 1. Mostrar diálogo para capturar el título y tipo antes de seleccionar archivo
+    String titulo = '';
+    String tipo = 'pdf';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Subir Material de Apoyo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Título del material *',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) => titulo = v.trim(),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: tipo,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de archivo',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'pdf', child: Text('PDF')),
+                  DropdownMenuItem(value: 'pptx', child: Text('PowerPoint')),
+                  DropdownMenuItem(value: 'video', child: Text('Video')),
+                  DropdownMenuItem(value: 'imagen', child: Text('Imagen')),
+                  DropdownMenuItem(value: 'otro', child: Text('Otro')),
+                ],
+                onChanged: (v) => setDialogState(() => tipo = v!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: titulo.isNotEmpty
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              style: FilledButton.styleFrom(
+                  backgroundColor: Colors.deepPurple),
+              child: const Text('Seleccionar archivo'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // 2. Abrir el selector de archivos nativo del dispositivo
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.any,
+    );
+
+    if (result == null || result.files.single.path == null) return;
+    if (!mounted) return;
+
+    final filePath = result.files.single.path!;
+
+    setState(() => _uploading = true);
+
+    try {
+      // 3. Llamar al servicio existente (multipart/form-data al servidor)
+      await _service.uploadMaterial(
+        idConferencia: widget.conferencia.idConferencia,
+        tituloMaterial: titulo,
+        tipoArchivo: tipo,
+        filePath: filePath,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Material subido exitosamente.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '❌ ${e.toString().replaceFirst('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   @override
@@ -171,7 +278,7 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
             ),
             const SizedBox(height: 14),
 
-            // ── Materiales ───────────────────────────────────────────────
+            // ── Materiales de Apoyo ──────────────────────────────────────
             Card(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
@@ -180,16 +287,41 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Materiales de Apoyo',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Materiales de Apoyo',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        // Botón de subida real
+                        _uploading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
+                              )
+                            : TextButton.icon(
+                                onPressed: _subirMaterial,
+                                icon: const Icon(Icons.upload_file,
+                                    color: Colors.deepPurple),
+                                label: const Text(
+                                  'Subir archivo',
+                                  style: TextStyle(color: Colors.deepPurple),
+                                ),
+                              ),
+                      ],
+                    ),
                     const Divider(),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'Usa el servidor o Postman para subir PDF, PPTX y otros archivos a esta conferencia.',
+                        'Toca "Subir archivo" para agregar PDF, PPTX, imágenes o videos a esta conferencia.',
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ),
@@ -225,7 +357,9 @@ class _DetalleConferenciaScreenState extends State<DetalleConferenciaScreen> {
             Text(
               label,
               style: TextStyle(
-                  color: color, fontSize: 11, fontWeight: FontWeight.w600),
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ],

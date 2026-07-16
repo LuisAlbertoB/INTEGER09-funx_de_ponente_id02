@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 /// Formulario para que el Ponente solicite un aula para su conferencia.
 /// Consume POST /api/eventos/:idEvento/solicitar-espacio/:idEspacio
+/// Campos requeridos: fecha_inicio, fecha_final (ISO 8601)
 class SolicitarEspacioScreen extends StatefulWidget {
   final int idEvento;
   final String tituloEvento;
@@ -56,14 +57,12 @@ class _SolicitarEspacioScreenState extends State<SolicitarEspacioScreen> {
           'Content-Type': 'application/json',
         },
       );
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && mounted) {
         final List<dynamic> data = jsonDecode(response.body);
-        if (mounted) {
-          setState(() {
-            _aulas = data.cast<Map<String, dynamic>>();
-            _loadingAulas = false;
-          });
-        }
+        setState(() {
+          _aulas = data.cast<Map<String, dynamic>>();
+          _loadingAulas = false;
+        });
       } else {
         if (mounted) setState(() => _loadingAulas = false);
       }
@@ -72,32 +71,40 @@ class _SolicitarEspacioScreenState extends State<SolicitarEspacioScreen> {
     }
   }
 
-  Future<void> _pickDateTime({required bool esInicio}) async {
+  /// Selector de fecha+hora robusto: primero fecha, luego hora, luego combina.
+  Future<DateTime?> _pickDateTime(DateTime? initialValue) async {
     final now = DateTime.now();
+    final initial = initialValue ?? now;
+
     final date = await showDatePicker(
       context: context,
-      initialDate: now,
-      firstDate: now,
+      initialDate: initial,
+      firstDate: now.subtract(const Duration(days: 1)),
       lastDate: now.add(const Duration(days: 365)),
     );
-    if (date == null || !mounted) return;
+    if (date == null || !mounted) return null;
 
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(now),
+      initialTime: TimeOfDay.fromDateTime(initial),
     );
-    if (time == null || !mounted) return;
+    if (time == null || !mounted) return null;
 
-    final dt = DateTime(
-      date.year, date.month, date.day, time.hour, time.minute,
-    );
-    setState(() {
-      if (esInicio) {
-        _fechaInicio = dt;
-      } else {
-        _fechaFin = dt;
-      }
-    });
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  Future<void> _selectFechaInicio() async {
+    final result = await _pickDateTime(_fechaInicio);
+    if (result != null && mounted) {
+      setState(() => _fechaInicio = result);
+    }
+  }
+
+  Future<void> _selectFechaFin() async {
+    final result = await _pickDateTime(_fechaFin ?? _fechaInicio);
+    if (result != null && mounted) {
+      setState(() => _fechaFin = result);
+    }
   }
 
   Future<void> _submit() async {
@@ -136,13 +143,14 @@ class _SolicitarEspacioScreenState extends State<SolicitarEspacioScreen> {
   }
 
   void _snack(String msg, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: color),
     );
   }
 
   String _fmt(DateTime dt) =>
-      DateFormat('dd/MM/yyyy HH:mm', 'es').format(dt);
+      DateFormat('dd/MM/yyyy  HH:mm', 'es').format(dt);
 
   @override
   Widget build(BuildContext context) {
@@ -182,31 +190,46 @@ class _SolicitarEspacioScreenState extends State<SolicitarEspacioScreen> {
             const SizedBox(height: 8),
             _loadingAulas
                 ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<int>(
-                    value: _idAulaSeleccionada,
-                    decoration: InputDecoration(
-                      hintText: 'Elige un espacio disponible',
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    items: _aulas.map((a) {
-                      final nombre = a['nombre_aula'] ?? a['nombre'] ?? 'Aula ${a['id_aula']}';
-                      final capacidad = a['capacidad'];
-                      return DropdownMenuItem<int>(
-                        value: a['id_aula'] as int,
-                        child: Text(
-                          capacidad != null
-                              ? '$nombre (cap. $capacidad)'
-                              : nombre.toString(),
+                : _aulas.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (v) => setState(() => _idAulaSeleccionada = v),
-                  ),
+                        child: const Text(
+                          'No se pudieron cargar las aulas. Verifica la conexión.',
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      )
+                    : DropdownButtonFormField<int>(
+                        value: _idAulaSeleccionada,
+                        decoration: InputDecoration(
+                          hintText: 'Elige un espacio disponible',
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        items: _aulas.map((a) {
+                          final nombre = a['nombre_aula']?.toString() ??
+                              a['nombre']?.toString() ??
+                              'Aula ${a['id_aula']}';
+                          final capacidad = a['capacidad'];
+                          return DropdownMenuItem<int>(
+                            value: a['id_aula'] as int,
+                            child: Text(
+                              capacidad != null
+                                  ? '$nombre  (cap. $capacidad)'
+                                  : nombre,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (v) => setState(() => _idAulaSeleccionada = v),
+                      ),
             const SizedBox(height: 20),
 
             // ── Fechas ───────────────────────────────────────────────────
@@ -214,22 +237,18 @@ class _SolicitarEspacioScreenState extends State<SolicitarEspacioScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             _dateTile(
-              label: _fechaInicio != null
-                  ? _fmt(_fechaInicio!)
-                  : 'Toca para seleccionar',
-              icon: Icons.calendar_today_outlined,
-              onTap: () => _pickDateTime(esInicio: true),
+              label: _fechaInicio != null ? _fmt(_fechaInicio!) : 'Toca para seleccionar',
+              hasValue: _fechaInicio != null,
+              onTap: _selectFechaInicio,
             ),
             const SizedBox(height: 16),
             const Text('Fecha y hora de fin *',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             _dateTile(
-              label: _fechaFin != null
-                  ? _fmt(_fechaFin!)
-                  : 'Toca para seleccionar',
-              icon: Icons.calendar_today_outlined,
-              onTap: () => _pickDateTime(esInicio: false),
+              label: _fechaFin != null ? _fmt(_fechaFin!) : 'Toca para seleccionar',
+              hasValue: _fechaFin != null,
+              onTap: _selectFechaFin,
             ),
             const SizedBox(height: 20),
 
@@ -297,23 +316,36 @@ class _SolicitarEspacioScreenState extends State<SolicitarEspacioScreen> {
 
   Widget _dateTile({
     required String label,
-    required IconData icon,
+    required bool hasValue,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: hasValue ? Colors.deepPurple.shade50 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
+          border: hasValue
+              ? Border.all(color: Colors.deepPurple.shade200)
+              : null,
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.deepPurple, size: 20),
+            Icon(
+              Icons.calendar_today_outlined,
+              color: hasValue ? Colors.deepPurple : Colors.grey,
+              size: 20,
+            ),
             const SizedBox(width: 12),
-            Text(label,
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
+            Text(
+              label,
+              style: TextStyle(
+                color: hasValue ? Colors.deepPurple.shade700 : Colors.grey.shade600,
+                fontSize: 15,
+                fontWeight: hasValue ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       ),

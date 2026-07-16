@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/event_service.dart';
 
 /// Formulario de evaluación post-evento.
-/// Al enviar, el servidor de Node.js pasa el comentario escrito a BERT (Fire & Forget)
-/// para análisis de sentimiento en segundo plano.
+/// El schema define calificacion como Decimal(2,1) → escala 0.0 a 5.0.
+/// La UI muestra estrellas 1-5 y se mapea directamente.
 class EvaluacionEventoScreen extends StatefulWidget {
   final int idEvento;
   final String tituloEvento;
@@ -22,7 +22,8 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
   final _service = EventService();
   final _comentarioCtrl = TextEditingController();
 
-  double _calificacion = 7;
+  // Escala 1-5 estrellas (Decimal(2,1) en el servidor: 0.0 a 5.0)
+  int _estrellas = 4;
   double _satisfaccion = 70;
   bool _loading = false;
   bool _enviado = false;
@@ -36,10 +37,11 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
   Future<void> _submit() async {
     setState(() => _loading = true);
     try {
+      // El servidor acepta calificacion como Decimal(2,1) → enviamos el valor directo (1.0-5.0)
       await _service.submitEvaluacion(
         idEvento: widget.idEvento,
-        calificacion: _calificacion.round(),
-        porcentajeSatisfaccion: _satisfaccion.round(),
+        calificacion: _estrellas,          // 1-5, compatible con Decimal(2,1)
+        porcentajeSatisfaccion: _satisfaccion.round(), // 0-100
         comentarioEscrito: _comentarioCtrl.text.trim().isEmpty
             ? null
             : _comentarioCtrl.text.trim(),
@@ -61,8 +63,6 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     if (_enviado) {
       return Scaffold(
         body: Center(
@@ -84,7 +84,7 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Tu retroalimentación ayuda a mejorar futuros eventos y alimenta nuestro sistema de inteligencia artificial.',
+                  'Tu retroalimentación alimenta el análisis de sentimiento BERT del sistema.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey.shade600),
                 ),
@@ -102,10 +102,7 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Evaluar Evento'),
-        backgroundColor: colorScheme.surface,
-      ),
+      appBar: AppBar(title: const Text('Evaluar Evento')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -147,33 +144,35 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
             ),
             const SizedBox(height: 28),
 
-            // ── Calificación ─────────────────────────────────────────────
-            _sectionTitle('⭐ Calificación general'),
-            const SizedBox(height: 4),
+            // ── Calificación con estrellas ────────────────────────────────
+            _sectionTitle('⭐ Calificación (1 - 5 estrellas)'),
+            const SizedBox(height: 12),
             Row(
-              children: [
-                Text(
-                  '${_calificacion.round()}',
-                  style: const TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final star = i + 1;
+                return GestureDetector(
+                  onTap: () => setState(() => _estrellas = star),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      star <= _estrellas ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: Colors.amber,
+                      size: 44,
+                    ),
                   ),
-                ),
-                const Text(
-                  ' / 10',
-                  style: TextStyle(fontSize: 20, color: Colors.grey),
-                ),
-              ],
+                );
+              }),
             ),
-            Slider(
-              value: _calificacion,
-              min: 1,
-              max: 10,
-              divisions: 9,
-              activeColor: Colors.deepPurple,
-              label: '${_calificacion.round()} ⭐',
-              onChanged: (v) => setState(() => _calificacion = v),
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                _labelEstrellas(_estrellas),
+                style: TextStyle(
+                  color: Colors.deepPurple.shade400,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -260,6 +259,17 @@ class _EvaluacionEventoScreenState extends State<EvaluacionEventoScreen> {
         ),
       ),
     );
+  }
+
+  String _labelEstrellas(int n) {
+    switch (n) {
+      case 1: return 'Muy malo';
+      case 2: return 'Regular';
+      case 3: return 'Aceptable';
+      case 4: return 'Bueno';
+      case 5: return 'Excelente';
+      default: return '';
+    }
   }
 
   Widget _sectionTitle(String text) => Text(
