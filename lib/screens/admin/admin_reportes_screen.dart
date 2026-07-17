@@ -134,7 +134,7 @@ class _AdminReportesScreenState extends State<AdminReportesScreen>
       backgroundColor: const Color(0xFF1E293B),
       flexibleSpace: FlexibleSpaceBar(
         title: const Text(
-          'Topic Modeling',
+          'Asociación Inteligente',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 18,
@@ -212,7 +212,7 @@ class _AdminReportesScreenState extends State<AdminReportesScreen>
         children: [
           Row(
             children: [
-              Expanded(child: _buildStatCard('Clusters', '$_totalClusters', Icons.category_rounded, const Color(0xFF6366F1))),
+              Expanded(child: _buildStatCard('Grupos', '$_totalClusters', Icons.category_rounded, const Color(0xFF6366F1))),
               const SizedBox(width: 12),
               Expanded(child: _buildStatCard('Reportes', '$totalReportes', Icons.description_rounded, const Color(0xFF10B981))),
             ],
@@ -241,7 +241,7 @@ class _AdminReportesScreenState extends State<AdminReportesScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Los reportes han sido agrupados automáticamente según su similitud temática.',
+            'Los incidentes han sido asociados inteligentemente basándose en su contexto, sentimiento y coincidencias.',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,
@@ -367,7 +367,7 @@ class _AdminReportesScreenState extends State<AdminReportesScreen>
             ),
           ),
           title: Text(
-            'Cluster #$clusterId',
+            'Asociación #$clusterId',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 17,
@@ -377,7 +377,7 @@ class _AdminReportesScreenState extends State<AdminReportesScreen>
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              '${reportes.length} reportes agrupados por similitud',
+              '${reportes.length} incidentes relacionados',
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 13,

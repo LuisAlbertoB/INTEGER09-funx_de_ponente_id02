@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/conferencia_model.dart';
 import '../../services/ponente_service.dart';
-import 'crear_conferencia_screen.dart';
+import 'crear_evento_screen.dart';
 import 'detalle_conferencia_screen.dart';
 
 class ConferenciasScreen extends StatefulWidget {
@@ -69,7 +69,7 @@ class _ConferenciasScreenState extends State<ConferenciasScreen> {
         onPressed: () async {
           final created = await Navigator.push<bool>(
             context,
-            MaterialPageRoute(builder: (_) => const CrearConferenciaScreen()),
+            MaterialPageRoute(builder: (_) => const CrearEventoScreen()),
           );
           if (created == true) _load();
         },

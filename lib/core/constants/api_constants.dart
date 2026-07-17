@@ -15,6 +15,10 @@ class ApiConstants {
   static String materialesConferencia(int id) =>
       '/api/ponente/conferencias/$id/materiales';
 
+  // Eventos Generales
+  static const String eventos = '/api/eventos';
+  static String eventoById(int id) => '/api/eventos/$id';
+
   // Catálogos
   static const String actividades = '/api/actividades';
   static const String periodos = '/api/periodos';
@@ -34,7 +38,8 @@ class ApiConstants {
   static String eventoEspacio(int idEvento, int idEspacio) =>
       '/api/eventos/$idEvento/solicitar-espacio/$idEspacio';
 
-  // Reportes y Clustering (IA)
+  // Reportes y Asociación Inteligente
+  static const String reportes = '/api/reportes';
   static const String clusteringReportes = '/api/reportes/clustering';
 
   // Health

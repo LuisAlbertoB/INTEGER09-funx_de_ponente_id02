@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/ponente_service.dart';
 
-class CrearConferenciaScreen extends StatefulWidget {
-  const CrearConferenciaScreen({super.key});
+class CrearEventoScreen extends StatefulWidget {
+  const CrearEventoScreen({super.key});
 
   @override
-  State<CrearConferenciaScreen> createState() => _CrearConferenciaScreenState();
+  State<CrearEventoScreen> createState() => _CrearEventoScreenState();
 }
 
-class _CrearConferenciaScreenState extends State<CrearConferenciaScreen> {
+class _CrearEventoScreenState extends State<CrearEventoScreen> {
   final _service = PonenteService();
   final _tituloCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -34,7 +34,19 @@ class _CrearConferenciaScreenState extends State<CrearConferenciaScreen> {
   Future<void> _loadCatalogos() async {
     final acts = await _service.getActividades();
     final pers = await _service.getPeriodos();
-    if (mounted) setState(() { _actividades = acts; _periodos = pers; });
+    
+    if (mounted) {
+      setState(() { 
+        _actividades = acts; 
+        _periodos = pers; 
+        
+        // Autoseleccionar la opción de "Conferencia" si existe en la base de datos (id: 4 o buscando por nombre)
+        if (acts.isNotEmpty) {
+          final confOpt = acts.firstWhere((a) => a['titulo_actividad']?.toString().toLowerCase().contains('conferencia') == true || a['id_actividad'] == 4, orElse: () => acts.first);
+          _idActividad = confOpt['id_actividad'];
+        }
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -76,7 +88,7 @@ class _CrearConferenciaScreenState extends State<CrearConferenciaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva Conferencia')),
+      appBar: AppBar(title: const Text('Nuevo Evento')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -151,7 +163,7 @@ class _CrearConferenciaScreenState extends State<CrearConferenciaScreen> {
                       backgroundColor: Colors.deepPurple,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Crear Conferencia', style: TextStyle(fontSize: 16)),
+                    child: const Text('Crear Evento', style: TextStyle(fontSize: 16)),
                   ),
           ],
         ),

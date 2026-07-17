@@ -19,6 +19,47 @@ class EventService {
     };
   }
 
+  // ── Eventos (Generales) ─────────────────────────────────────────────────
+
+  /// GET /api/eventos
+  Future<Map<String, dynamic>> getEventos({
+    int page = 1,
+    int limit = 10,
+    int? estado,
+    int? idActividad,
+    String? nivelAcademicoObjetivo,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.eventos}').replace(
+      queryParameters: {
+        'page': '$page',
+        'limit': '$limit',
+        if (estado != null) 'estado': '$estado',
+        if (idActividad != null) 'id_actividad': '$idActividad',
+        if (nivelAcademicoObjetivo != null && nivelAcademicoObjetivo.isNotEmpty)
+          'nivel_academico_objetivo': nivelAcademicoObjetivo,
+      },
+    );
+    final response = await http.get(uri, headers: await _headers());
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    final err = jsonDecode(response.body);
+    throw Exception(err['message'] ?? 'Error al cargar los eventos.');
+  }
+
+  /// GET /api/eventos/:id
+  Future<Map<String, dynamic>> getEventoById(int id) async {
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.eventoById(id)}'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    final err = jsonDecode(response.body);
+    throw Exception(err['message'] ?? 'Error al cargar el evento.');
+  }
+
   // ── Foro ────────────────────────────────────────────────────────────────
 
   /// GET /api/eventos/:id/foro

@@ -84,4 +84,26 @@ class AdminService {
     
     throw Exception('Error al cargar clustering de reportes. Código: ${response.statusCode}');
   }
+
+  // Levantar un nuevo reporte manual
+  Future<Map<String, dynamic>> crearReporte({
+    required String titulo,
+    String? descripcion,
+    required int idAula,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.reportes}'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'titulo': titulo,
+        if (descripcion != null && descripcion.isNotEmpty) 'descripcion': descripcion,
+        'id_aula': idAula,
+      }),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    final err = jsonDecode(response.body);
+    throw Exception(err['message'] ?? 'Error al crear el reporte.');
+  }
 }

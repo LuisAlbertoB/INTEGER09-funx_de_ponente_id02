@@ -44,8 +44,18 @@ class _RecomendadosScreenState extends State<RecomendadosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Para Ti (IA)'),
-        backgroundColor: Colors.deepPurple.shade800,
+        title: const Text('Para Ti (IA)', style: TextStyle(fontWeight: FontWeight.w600)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.deepPurple.shade900, Colors.purple.shade700],
+            ),
+          ),
+        ),
         foregroundColor: Colors.white,
       ),
       body: _buildBody(),
@@ -116,16 +126,36 @@ class _RecomendadosScreenState extends State<RecomendadosScreen> {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: Colors.deepPurple.shade50,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
           child: Row(
             children: [
-              Icon(Icons.psychology, color: Colors.deepPurple.shade800, size: 32),
-              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.auto_awesome, color: Colors.deepPurple.shade700, size: 28),
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  'Basado en tu historial de interacciones, la IA ha encontrado estos eventos para ti:',
-                  style: TextStyle(color: Colors.deepPurple.shade900),
+                  'Basado en tus intereses y evaluaciones previas, hemos seleccionado estos eventos especialmente para ti.',
+                  style: TextStyle(
+                    color: Colors.grey.shade800,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
                 ),
               ),
             ],
@@ -140,47 +170,79 @@ class _RecomendadosScreenState extends State<RecomendadosScreen> {
               final score = (evento['ai_score'] ?? 0.0) as double;
               final matchPercentage = (score * 100).toInt();
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                  children: [
-                    // Cabecera con el Match
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurple.shade800,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$matchPercentage% Afinidad',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Cuerpo de la tarjeta
-                    ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      title: Text(
-                        evento['titulo'] ?? 'Evento Recomendado',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          evento['descripcion'] ?? 'Sin descripción',
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
                   ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cabecera con el Match (Gradiente vibrante)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.orange.shade400, Colors.deepOrange.shade600],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$matchPercentage% Match Contigo',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Cuerpo de la tarjeta
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              evento['titulo'] ?? 'Evento Recomendado',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              evento['descripcion'] ?? 'Sin descripción disponible',
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 14, height: 1.5),
+                            ),
+                            const SizedBox(height: 20),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  // Próximamente: Ir a detalle
+                                },
+                                style: TextButton.styleFrom(foregroundColor: Colors.deepPurple),
+                                icon: const Icon(Icons.visibility, size: 20),
+                                label: const Text('Ver Detalles', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
