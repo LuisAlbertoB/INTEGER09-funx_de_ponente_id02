@@ -11,42 +11,39 @@ class AdminReportesScreen extends StatefulWidget {
 class _AdminReportesScreenState extends State<AdminReportesScreen>
     with SingleTickerProviderStateMixin {
   final AdminService _adminService = AdminService();
+
   bool _isLoading = true;
   String? _error;
-  int _totalClusters = 0;
-  List<dynamic> _grupos = [];
-  late AnimationController _animationController;
 
-  // Paleta de colores para los clusters
-  final List<Color> _clusterColors = [
-    const Color(0xFF6366F1), // Indigo
-    const Color(0xFF8B5CF6), // Violet
-    const Color(0xFFEC4899), // Pink
-    const Color(0xFFF59E0B), // Amber
-    const Color(0xFF10B981), // Emerald
-    const Color(0xFF3B82F6), // Blue
-    const Color(0xFFEF4444), // Red
-    const Color(0xFF14B8A6), // Teal
-  ];
+  // Grupos originales recibidos del servidor
+  List<dynamic> _rawGruposPorAula      = [];
+  List<dynamic> _rawGruposPorDocente   = [];
+  List<dynamic> _rawGruposPorSentimiento = [];
+  
+  // Grupos filtrados que se muestran en la UI
+  List<dynamic> _gruposPorAula      = [];
+  List<dynamic> _gruposPorDocente   = [];
+  List<dynamic> _gruposPorSentimiento = [];
+  
+  int _totalReportes = 0;
+  int _totalProcesados = 0;
+
+  // Filtro de fecha seleccionado
+  String _filtroFecha = 'Todos';
+
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
+    _tabController = TabController(length: 3, vsync: this);
     _fetchClustering();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _tabController.dispose();
     super.dispose();
-  }
-
-  Color _getClusterColor(int index) {
-    return _clusterColors[index % _clusterColors.length];
   }
 
   Future<void> _fetchClustering() async {
@@ -54,546 +51,501 @@ class _AdminReportesScreenState extends State<AdminReportesScreen>
       _isLoading = true;
       _error = null;
     });
-
     try {
       final result = await _adminService.getReportesClustering();
       setState(() {
-        _totalClusters = result['total_clusters'] ?? 0;
-        _grupos = result['grupos'] ?? [];
+        _totalReportes           = result['total_reportes'] ?? 0;
+        _totalProcesados         = result['total_procesados'] ?? 0;
+        _rawGruposPorAula        = result['grupos_por_aula']       ?? [];
+        _rawGruposPorDocente     = result['grupos_por_docente']    ?? [];
+        _rawGruposPorSentimiento = result['grupos_por_sentimiento']?? [];
         _isLoading = false;
       });
-      _animationController.forward(from: 0);
+      _aplicarFiltroFecha();
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
       });
     }
   }
 
+  void _aplicarFiltroFecha() {
+    if (_filtroFecha == 'Todos') {
+      setState(() {
+        _gruposPorAula = List.from(_rawGruposPorAula);
+        _gruposPorDocente = List.from(_rawGruposPorDocente);
+        _gruposPorSentimiento = List.from(_rawGruposPorSentimiento);
+      });
+      return;
+    }
+
+    final now = DateTime.now();
+    DateTime limite;
+    if (_filtroFecha == 'Últimos 7 días') {
+      limite = now.subtract(const Duration(days: 7));
+    } else if (_filtroFecha == 'Último mes') {
+      limite = now.subtract(const Duration(days: 30));
+    } else {
+      limite = now.subtract(const Duration(days: 3650));
+    }
+
+    List<dynamic> filtrarGrupo(List<dynamic> grupos) {
+      final List<dynamic> resultado = [];
+      for (var grupo in grupos) {
+        final reportes = grupo['reportes'] as List<dynamic>? ?? [];
+        final reportesFiltrados = reportes.where((r) {
+          if (r['fecha_reporte'] == null) return true; // Si no hay fecha, no ocultar
+          try {
+            final f = DateTime.parse(r['fecha_reporte'].toString());
+            return f.isAfter(limite) || f.isAtSameMomentAs(limite);
+          } catch (_) {
+            return true;
+          }
+        }).toList();
+
+        if (reportesFiltrados.isNotEmpty) {
+          // Copiar el grupo pero con la lista de reportes filtrada
+          final Map<String, dynamic> grupoCopia = Map<String, dynamic>.from(grupo);
+          grupoCopia['reportes'] = reportesFiltrados;
+          resultado.add(grupoCopia);
+        }
+      }
+      return resultado;
+    }
+
+    setState(() {
+      _gruposPorAula = filtrarGrupo(_rawGruposPorAula);
+      _gruposPorDocente = filtrarGrupo(_rawGruposPorDocente);
+      _gruposPorSentimiento = filtrarGrupo(_rawGruposPorSentimiento);
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  BUILD
+  // ─────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          if (_isLoading)
-            const SliverFillRemaining(child: _LoadingState())
-          else if (_error != null)
-            SliverFillRemaining(child: _ErrorState(error: _error!, onRetry: _fetchClustering))
-          else if (_grupos.isEmpty)
-              const SliverFillRemaining(child: _EmptyState())
-            else ...[
-                SliverToBoxAdapter(child: _buildStatsSection()),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        return AnimatedBuilder(
-                          animation: _animationController,
-                          builder: (context, child) {
-                            final delay = index * 0.1;
-                            final animValue = Curves.easeOutBack.transform(
-                              ((_animationController.value - delay) / (1 - delay)).clamp(0.0, 1.0),
-                            );
-                            return Transform.translate(
-                              offset: Offset(0, 30 * (1 - animValue)),
-                              child: Opacity(
-                                opacity: animValue,
-                                child: _buildClusterCard(_grupos[index], index),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      childCount: _grupos.length,
-                    ),
-                  ),
-                ),
-              ],
-        ],
+      backgroundColor: const Color(0xFFF1F5F9),
+      body: NestedScrollView(
+        headerSliverBuilder: (ctx, _) => [_buildSliverAppBar()],
+        body: _isLoading
+            ? _buildLoading()
+            : _error != null
+                ? _buildError()
+                : _buildContent(),
       ),
       floatingActionButton: _isLoading
           ? null
           : FloatingActionButton.extended(
-        onPressed: _fetchClustering,
-        backgroundColor: const Color(0xFF1E293B),
-        icon: const Icon(Icons.auto_awesome, color: Colors.white),
-        label: const Text('Reanalizar', style: TextStyle(color: Colors.white)),
-      ),
+              onPressed: _fetchClustering,
+              backgroundColor: const Color(0xFF1E293B),
+              icon: const Icon(Icons.auto_awesome, color: Colors.white),
+              label: const Text('Reanalizar', style: TextStyle(color: Colors.white)),
+            ),
     );
   }
 
-  Widget _buildSliverAppBar() {
+  // ─── AppBar ───────────────────────────────────────────────────
+
+  SliverAppBar _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 140,
-      floating: false,
+      expandedHeight: 160,
       pinned: true,
-      backgroundColor: const Color(0xFF1E293B),
+      floating: false,
+      backgroundColor: const Color(0xFF0F172A),
       flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          'Asociación Inteligente',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+        titlePadding: const EdgeInsets.only(left: 20, bottom: 56),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Reportes IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+                if (!_isLoading && _error == null)
+                  Text(
+                    '$_totalProcesados/$_totalReportes procesados',
+                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                  ),
+              ],
+            ),
+            // Widget de filtro de fechas
+            if (!_isLoading && _error == null)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.filter_list, color: Colors.white),
+                tooltip: 'Filtrar por fecha',
+                onSelected: (valor) {
+                  setState(() => _filtroFecha = valor);
+                  _aplicarFiltroFecha();
+                },
+                itemBuilder: (context) => [
+                  _buildPopupMenuItem('Todos'),
+                  _buildPopupMenuItem('Últimos 7 días'),
+                  _buildPopupMenuItem('Último mes'),
+                ],
+              )
+          ],
         ),
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF1E293B),
-                Color(0xFF334155),
-              ],
+              colors: [Color(0xFF0F172A), Color(0xFF1E40AF)],
             ),
           ),
           child: Stack(
             children: [
+              Positioned(right: -40, top: -20,
+                child: Icon(Icons.manage_search_rounded, size: 200, color: Colors.white.withOpacity(0.05))),
               Positioned(
-                right: -50,
-                top: -30,
-                child: Icon(
-                  Icons.bubble_chart,
-                  size: 200,
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
-              Positioned(
-                left: 20,
-                bottom: 60,
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.auto_awesome, color: Colors.amber, size: 16),
-                          SizedBox(width: 6),
-                          Text(
-                            'Potenciado por IA',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                left: 20, bottom: 16,
+                child: Wrap(spacing: 8, children: [
+                  _chip(Icons.location_on, '${_gruposPorAula.length} Aulas', Colors.blue.shade300),
+                  _chip(Icons.person_pin, '${_gruposPorDocente.length} Docentes', Colors.purple.shade300),
+                  _chip(Icons.sentiment_dissatisfied, '${_gruposPorSentimiento.length} Grupos', Colors.orange.shade300),
+                ]),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStatsSection() {
-    final totalReportes = _grupos.fold<int>(
-      0,
-          (sum, grupo) => sum + ((grupo['reportes'] as List?)?.length ?? 0),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: _buildStatCard('Grupos', '$_totalClusters', Icons.category_rounded, const Color(0xFF6366F1))),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Reportes', '$totalReportes', Icons.description_rounded, const Color(0xFF10B981))),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Agrupaciones Semánticas',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Los incidentes han sido asociados inteligentemente basándose en su contexto, sentimiento y coincidencias.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 16),
+      bottom: TabBar(
+        controller: _tabController,
+        indicatorColor: Colors.blue.shade300,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white54,
+        tabs: [
+          Tab(icon: const Icon(Icons.location_on, size: 18), text: 'Por Aula (${_gruposPorAula.length})'),
+          Tab(icon: const Icon(Icons.person_pin, size: 18), text: 'Por Docente (${_gruposPorDocente.length})'),
+          Tab(icon: const Icon(Icons.mood, size: 18), text: 'Por Sentimiento'),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+  PopupMenuItem<String> _buildPopupMenuItem(String valor) {
+    return PopupMenuItem<String>(
+      value: valor,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+          Text(valor),
+          if (_filtroFecha == valor)
+            const Icon(Icons.check, color: Color(0xFF3B82F6), size: 18),
         ],
       ),
     );
   }
 
-  Widget _buildClusterCard(dynamic grupo, int index) {
-    final reportes = grupo['reportes'] as List<dynamic>? ?? [];
-    final clusterId = grupo['cluster_id'];
-    final color = _getClusterColor(index);
+  Widget _chip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 5),
+        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
 
+  // ─── Content ──────────────────────────────────────────────────
+
+  Widget _buildContent() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildTabAula(),
+        _buildTabDocente(),
+        _buildTabSentimiento(),
+      ],
+    );
+  }
+
+  // TAB 1 — Por Aula
+  Widget _buildTabAula() {
+    if (_gruposPorAula.isEmpty) {
+      return _buildEmptyTab(
+        Icons.location_off,
+        'Sin ubicaciones detectadas',
+        'La IA no encontró nombres de aulas en los textos de los reportes. Asegúrate de que los reportes mencionen el aula (ej. "Aula A-101").',
+        Colors.blue,
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _gruposPorAula.length,
+      itemBuilder: (ctx, i) {
+        final grupo = _gruposPorAula[i];
+        return _buildGrupoCard(
+          icon: Icons.meeting_room_rounded,
+          color: const Color(0xFF3B82F6),
+          titulo: grupo['aula']?.toString() ?? 'Aula desconocida',
+          subtitulo: '${(grupo['reportes'] as List).length} incidencias en esta ubicación',
+          reportes: grupo['reportes'] as List,
+          accentColor: const Color(0xFF3B82F6),
+        );
+      },
+    );
+  }
+
+  // TAB 2 — Por Docente
+  Widget _buildTabDocente() {
+    if (_gruposPorDocente.isEmpty) {
+      return _buildEmptyTab(
+        Icons.person_off,
+        'Sin docentes detectados',
+        'La IA no encontró nombres de personas en los textos de los reportes. Los reportes que mencionen a algún docente aparecerán aquí.',
+        Colors.purple,
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _gruposPorDocente.length,
+      itemBuilder: (ctx, i) {
+        final grupo = _gruposPorDocente[i];
+        return _buildGrupoCard(
+          icon: Icons.school_rounded,
+          color: const Color(0xFF8B5CF6),
+          titulo: grupo['docente']?.toString() ?? 'Docente desconocido',
+          subtitulo: '${(grupo['reportes'] as List).length} reportes que mencionan a esta persona',
+          reportes: grupo['reportes'] as List,
+          accentColor: const Color(0xFF8B5CF6),
+        );
+      },
+    );
+  }
+
+  // TAB 3 — Por Sentimiento
+  Widget _buildTabSentimiento() {
+    final colores = {
+      'NEGATIVO': const Color(0xFFEF4444),
+      'NEUTRAL':  const Color(0xFFF59E0B),
+      'POSITIVO': const Color(0xFF10B981),
+    };
+    final iconos = {
+      'NEGATIVO': Icons.sentiment_very_dissatisfied_rounded,
+      'NEUTRAL':  Icons.sentiment_neutral_rounded,
+      'POSITIVO': Icons.sentiment_very_satisfied_rounded,
+    };
+    final etiquetas = {
+      'NEGATIVO': '🔴 Urgentes — Quejas y daños graves',
+      'NEUTRAL':  '🟡 Moderados — Observaciones y avisos',
+      'POSITIVO': '🟢 Leves — Comentarios positivos',
+    };
+
+    if (_gruposPorSentimiento.isEmpty) {
+      return _buildEmptyTab(Icons.mood_bad, 'Sin datos de sentimiento', '', Colors.orange);
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _gruposPorSentimiento.length,
+      itemBuilder: (ctx, i) {
+        final grupo = _gruposPorSentimiento[i];
+        final sent  = grupo['sentimiento']?.toString() ?? 'NEUTRAL';
+        final color = colores[sent] ?? Colors.grey;
+        return _buildGrupoCard(
+          icon: iconos[sent] ?? Icons.mood,
+          color: color,
+          titulo: etiquetas[sent] ?? sent,
+          subtitulo: '${(grupo['reportes'] as List).length} reportes clasificados por sentimiento',
+          reportes: grupo['reportes'] as List,
+          accentColor: color,
+        );
+      },
+    );
+  }
+
+  // ─── Reusable group card ──────────────────────────────────────
+
+  Widget _buildGrupoCard({
+    required IconData icon,
+    required Color color,
+    required String titulo,
+    required String subtitulo,
+    required List reportes,
+    required Color accentColor,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 4))],
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           leading: Container(
-            width: 56,
-            height: 56,
+            width: 52, height: 52,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, color.withOpacity(0.7)],
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Stack(alignment: Alignment.center, children: [
+              Icon(icon, color: color, size: 26),
+              Positioned(right: 2, top: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  child: Text('${reportes.length}', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                ),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${reportes.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-                const Text(
-                  'items',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
+            ]),
           ),
-          title: Text(
-            'Asociación #$clusterId',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-              color: Color(0xFF1E293B),
-            ),
-          ),
+          title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '${reportes.length} incidentes relacionados',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 13,
-              ),
-            ),
+            child: Text(subtitulo, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
           ),
           children: [
             const Divider(height: 1),
             const SizedBox(height: 12),
-            ...reportes.asMap().entries.map((entry) {
-              final reporte = entry.value;
-              return _buildReporteItem(reporte, color);
-            }),
+            ...reportes.map((r) => _buildReporteItem(r, accentColor)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReporteItem(dynamic reporte, Color accentColor) {
+  Widget _buildReporteItem(dynamic r, Color accent) {
+    final importancia = r['ia_importancia']?.toString() ?? '';
+    final sentimiento = r['ia_sentimiento']?.toString() ?? '';
+    final aula        = r['ia_aula_detectada']?.toString();
+    final docente     = r['ia_docente_detectado']?.toString();
+    final titulo      = r['titulo']?.toString() ?? 'Sin título';
+    final descripcion = r['descripcion']?.toString() ?? '';
+
+    final impColor = importancia == 'ALTA' ? Colors.red.shade400
+        : importancia == 'MEDIA' ? Colors.orange.shade400
+        : Colors.green.shade400;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: impColor, width: 4)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  reporte['titulo'] ?? 'Sin título',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.location_on, size: 14, color: accentColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      reporte['aula']?['nombre_clave'] ?? 'N/A',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: accentColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Título + badge de importancia
+        Row(children: [
+          Expanded(child: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1E293B)))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(color: impColor.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+            child: Text(importancia, style: TextStyle(color: impColor, fontSize: 11, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 8),
-          Text(
-            reporte['descripcion'] ?? 'Sin descripción',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              height: 1.4,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+        ]),
+        const SizedBox(height: 6),
+        // Descripción
+        Text(descripcion, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4)),
+        const SizedBox(height: 10),
+        // Metadata row: aula detectada | docente | sentimiento
+        Wrap(spacing: 6, runSpacing: 4, children: [
+          if (aula != null) _tag(Icons.meeting_room, aula, Colors.blue.shade600),
+          if (docente != null) _tag(Icons.person, docente, Colors.purple.shade600),
+          _tag(
+            sentimiento == 'NEGATIVO' ? Icons.sentiment_dissatisfied
+                : sentimiento == 'POSITIVO' ? Icons.sentiment_satisfied
+                : Icons.sentiment_neutral,
+            sentimiento,
+            sentimiento == 'NEGATIVO' ? Colors.red.shade600
+                : sentimiento == 'POSITIVO' ? Colors.green.shade600
+                : Colors.orange.shade700,
           ),
-        ],
-      ),
+        ]),
+      ]),
     );
   }
-}
 
-// Widgets de estado extraídos para mejor legibilidad
-class _LoadingState extends StatelessWidget {
-  const _LoadingState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 80,
-            height: 80,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: const Color(0xFF6366F1).withOpacity(0.3),
-                  ),
-                ),
-                const Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 32),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Analizando reportes...',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'La IA está identificando patrones semánticos',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-          ),
-        ],
-      ),
+  Widget _tag(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(6)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 11, color: color),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
-}
 
-class _ErrorState extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
+  // ─── States ───────────────────────────────────────────────────
 
-  const _ErrorState({required this.error, required this.onRetry});
+  Widget _buildLoading() {
+    return const Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SizedBox(
+          width: 72, height: 72,
+          child: Stack(alignment: Alignment.center, children: [
+            SizedBox(width: 72, height: 72,
+              child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF3B82F6))),
+            Icon(Icons.manage_search_rounded, color: Color(0xFF1E40AF), size: 30),
+          ]),
+        ),
+        SizedBox(height: 24),
+        Text('Analizando reportes con IA...', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+        SizedBox(height: 8),
+        Text('NER + Análisis de Sentimiento en proceso', style: TextStyle(fontSize: 13, color: Colors.grey)),
+      ]),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildError() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.error_outline_rounded, size: 48, color: Colors.red.shade400),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Error en el análisis',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E293B),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-            ),
-          ],
-        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
+            child: Icon(Icons.error_outline_rounded, size: 48, color: Colors.red.shade400),
+          ),
+          const SizedBox(height: 24),
+          const Text('Error en el análisis', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+          const SizedBox(height: 12),
+          Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _fetchClustering,
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
+          ),
+        ]),
       ),
     );
   }
-}
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildEmptyTab(IconData icon, String title, String subtitle, MaterialColor color) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inbox_rounded, size: 80, color: Colors.grey.shade300),
-          const SizedBox(height: 24),
-          const Text(
-            'Sin reportes para analizar',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Aún no hay reportes registrados en el sistema',
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, size: 72, color: color.shade200),
+          const SizedBox(height: 20),
+          Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color.shade700)),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5)),
+          ],
+        ]),
       ),
     );
   }
