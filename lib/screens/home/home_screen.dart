@@ -11,6 +11,7 @@ import '../catalogo/catalogo_eventos_screen.dart';
 import '../events/recomendados_screen.dart';
 import '../profile/profile_screen.dart';
 import '../qr/qr_scanner_screen.dart';
+import '../reportes/crear_reporte_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -165,6 +166,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const InfraestructuraScreen()),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _MenuCard(
+                icon: Icons.report_problem,
+                title: 'Reportar Incidente',
+                subtitle: 'Aulas, mobiliario o problemas físicos',
+                color: Colors.orange.shade700,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CrearReporteScreen()),
                 ),
               ),
               const SizedBox(height: 8),
