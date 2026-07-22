@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: solicitud_espacios
+      POSTGRES_PASSWORD: password_seguro_produccion
+      POSTGRES_DB: solicitud_espacios
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  nlp:
+    build:
+      context: ./nlp_service
+      dockerfile: Dockerfile
+    container_name: nlp_api
+    restart: always
+    volumes:
+      - nlp_models:/app/models_cache
+    networks:
+      - app_network
+
+  api:
+    build:
+      context: ./server
+      dockerfile: deploy/Dockerfile
+    container_name: node_api
+    restart: always
+    ports:
+      - "80:3000"
+    environment:
+      DATABASE_URL: "postgresql://solicitud_espacios:password_seguro_produccion@db:5432/solicitud_espacios?schema=public"
+      NLP_SERVICE_URL: "http://nlp:8000"
+      JWT_SECRET: "secreto_seguro_monorepo_jwt"
+      UPLOAD_DIR: "uploads/materiales"
+      PORT: 3000
+    depends_on:
+      - db
+      - nlp
+    volumes:
+      - uploads_data:/app/uploads
+    command: /bin/sh -c "npx prisma db push --accept-data-loss && node prisma/seed.js && npm start"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  uploads_data:
+  nlp_models:
