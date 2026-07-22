@@ -1,0 +1,497 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  admin
+  ponente
+  coordinador
+  participante
+  asistente
+  usuario_general
+}
+
+enum EstadoSolicitud {
+  pendiente
+  aprobada
+  rechazada
+  cancelada
+}
+
+enum TipoSolicitud {
+  normal
+  especial
+}
+
+enum NivelAcademico {
+  undergraduate
+  postgraduate
+  ambos
+}
+
+enum TipoMaterial {
+  pdf
+  pptx
+  video
+  link
+  imagen
+  otro
+}
+
+enum Genero {
+  hombre
+  mujer
+  otro
+  prefiero_no_decir
+}
+
+enum ParticipationLevel {
+  pasivo
+  activo
+  muy_activo
+}
+
+enum SentimientoGeneral {
+  positivo
+  neutral
+  negativo
+}
+
+// ------------------------------------------------------------
+// 1. USUARIOS
+// ------------------------------------------------------------
+model Usuario {
+  id_usuario      Int      @id @default(autoincrement())
+  nombre_completo String   @db.VarChar(150)
+  matricula       String   @unique @db.VarChar(50)
+  contrasena      String   @db.VarChar(255)
+  rol             Rol      @default(usuario_general)
+  estado          Int      @default(1)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Auto-referencia: quién creó este usuario
+  id_user_creator Int?
+  creador         Usuario?  @relation("UsuarioCreador", fields: [id_user_creator], references: [id_usuario])
+  usuariosCreados Usuario[] @relation("UsuarioCreador")
+
+  // Relaciones
+  solicitudes             Solicitud[]             @relation("SolicitanteAula")
+  solicitudesInmobiliario SolicitudInmobiliario[] @relation("SolicitanteInmobiliario")
+  reportes                Reporte[]               @relation("ReportanteReporte")
+  conferencias            Conferencia[]           @relation("PonenteConferencia")
+  feedbacks               FeedbackAsistente[]     @relation("UsuarioFeedback")
+  aulasPropias            Aula[]                  @relation("AulaOwner")
+  comentariosForo         ComentarioForo[]        @relation("UsuarioForo")
+  evaluacionesEventos     EvaluacionEvento[]      @relation("UsuarioEvaluacion")
+
+  @@map("usuarios")
+}
+
+// ------------------------------------------------------------
+// 2. EDIFICIO
+// ------------------------------------------------------------
+model Edificio {
+  id_edificio  Int      @id @default(autoincrement())
+  nombre_clave String   @db.VarChar(100)
+  estado       Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  aulas Aula[]
+
+  @@map("edificios")
+}
+
+// ------------------------------------------------------------
+// 3. AULA
+// ------------------------------------------------------------
+model Aula {
+  id_aula      Int      @id @default(autoincrement())
+  nombre_clave String   @db.VarChar(100)
+  estado       Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  id_edificio Int
+  edificio    Edificio @relation(fields: [id_edificio], references: [id_edificio])
+
+  id_owner Int?
+  owner    Usuario? @relation("AulaOwner", fields: [id_owner], references: [id_usuario])
+
+  solicitudes    Solicitud[]                        @relation("AulaSolicitud")
+  reportes       Reporte[]                          @relation("AulaReporte")
+  mantenimientos BitacoraMantenimiento[]            @relation("AulaMantenimiento")
+  inventarioBase AulaHasMobiliarioInfraestructura[]
+  conferencias   Conferencia[]                      @relation("AulaConferencia")
+
+  @@map("aulas")
+}
+
+// ------------------------------------------------------------
+// 4. MOBILIARIO
+// ------------------------------------------------------------
+model CatalogoInmobiliario {
+  id_inmobiliario  Int      @id @default(autoincrement())
+  categoria        String   @db.VarChar(100)
+  nombre           String   @db.VarChar(150)
+  modelo           String?  @db.VarChar(150)
+  num_de_serie     String?  @unique @db.VarChar(100)
+  stock_disponible Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  solicitudesInmobiliario SolicitudInmobiliario[]            @relation("InmobiliarioSolicitud")
+  reportes                Reporte[]                          @relation("InmobiliarioReporte")
+  mantenimientos          BitacoraMantenimiento[]            @relation("InmobiliarioMantenimiento")
+  aulasAsignadas          AulaHasMobiliarioInfraestructura[]
+
+  @@map("mobiliario")
+}
+
+// ------------------------------------------------------------
+// 5. PERIODOS (Ciclos Escolares / Semestres)
+// ------------------------------------------------------------
+model Periodo {
+  id_periodo   Int      @id @default(autoincrement())
+  nombre_clave String   @db.VarChar(100)
+  fecha_inicio DateTime
+  fecha_final  DateTime
+  estado       Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Agrupación de todas las entidades temporales
+  solicitudes             Solicitud[]
+  solicitudesInmobiliario SolicitudInmobiliario[]
+  reportes                Reporte[]
+  mantenimientos          BitacoraMantenimiento[]
+  conferencias            Conferencia[]
+
+  @@map("periodos")
+}
+
+// ------------------------------------------------------------
+// 6. ACTIVIDAD (Propósito de la solicitud)
+// ------------------------------------------------------------
+model Actividad {
+  id_actividad        Int      @id @default(autoincrement())
+  titulo_actividad    String   @db.VarChar(150)
+  subtitulo_actividad String?  @db.VarChar(150)
+  descripcion         String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  solicitudes  Solicitud[]
+  conferencias Conferencia[]
+
+  @@map("actividades")
+}
+
+// ------------------------------------------------------------
+// 7. SOLICITUD
+// ------------------------------------------------------------
+model Solicitud {
+  id_solicitud   Int             @id @default(autoincrement())
+  tipo_solicitud TipoSolicitud   @default(normal)
+  fecha_inicio   DateTime
+  fecha_final    DateTime
+  motivo         String?         @db.Text
+  estado         EstadoSolicitud @default(pendiente)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  // Relaciones
+  id_user_solicitante Int
+  solicitante         Usuario @relation("SolicitanteAula", fields: [id_user_solicitante], references: [id_usuario])
+
+  id_aula Int
+  aula    Aula @relation("AulaSolicitud", fields: [id_aula], references: [id_aula])
+
+  id_periodo Int
+  periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
+
+  id_actividad Int?
+  actividad    Actividad? @relation(fields: [id_actividad], references: [id_actividad])
+
+  solicitudesInmobiliarioVinculadas SolicitudHasSolicitudInmobiliario[]
+
+  @@map("solicitudes")
+}
+
+// ------------------------------------------------------------
+// 8. SOLICITUD_INMOBILIARIO
+// ------------------------------------------------------------
+model SolicitudInmobiliario {
+  id_solicitud_inmobiliario Int             @id @default(autoincrement())
+  cantidad_solicitada       Int             @default(1)
+  estado                    EstadoSolicitud @default(pendiente)
+  fecha_inicio              DateTime
+  fecha_fin                 DateTime
+  createdAt                 DateTime        @default(now()) @map("created_at")
+  updatedAt                 DateTime        @updatedAt @map("updated_at")
+
+  // Relaciones
+  id_user_solicitante Int
+  solicitante         Usuario @relation("SolicitanteInmobiliario", fields: [id_user_solicitante], references: [id_usuario])
+
+  id_inmobiliario_solicitado Int
+  inmobiliario               CatalogoInmobiliario @relation("InmobiliarioSolicitud", fields: [id_inmobiliario_solicitado], references: [id_inmobiliario])
+
+  id_periodo Int
+  periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
+
+  solicitudesAulaVinculadas SolicitudHasSolicitudInmobiliario[]
+
+  @@map("solicitudes_inmobiliario")
+}
+
+// ------------------------------------------------------------
+// 9. SOLICITUD_HAS_SOLICITUD_INMOBILIARIO (Pivote N:M)
+// ------------------------------------------------------------
+model SolicitudHasSolicitudInmobiliario {
+  id                        Int @id @default(autoincrement()) @map("id_solicitud_has_solicitud_inmobiliario")
+  id_solicitud              Int
+  id_solicitud_inmobiliario Int
+
+  solicitud             Solicitud             @relation(fields: [id_solicitud], references: [id_solicitud], onDelete: Cascade)
+  solicitudInmobiliario SolicitudInmobiliario @relation(fields: [id_solicitud_inmobiliario], references: [id_solicitud_inmobiliario], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([id_solicitud, id_solicitud_inmobiliario])
+  @@map("solicitud_has_solicitud_inmobiliario")
+}
+
+// ------------------------------------------------------------
+// 10. AULA_HAS_MOBILIARIO_INFRAESTRUCTURA (Inventario Base)
+// ------------------------------------------------------------
+model AulaHasMobiliarioInfraestructura {
+  id_aula_has_mobiliario_infraestructura Int @id @default(autoincrement())
+  id_aula                                Int
+  id_mobiliario                          Int
+  cantidad_en_aula                       Int @default(0)
+
+  aula       Aula                 @relation(fields: [id_aula], references: [id_aula], onDelete: Cascade)
+  mobiliario CatalogoInmobiliario @relation(fields: [id_mobiliario], references: [id_inmobiliario])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([id_aula, id_mobiliario])
+  @@map("aula_has_mobiliario_infraestructura")
+}
+
+// ------------------------------------------------------------
+// 11. REPORTES
+// ------------------------------------------------------------
+model Reporte {
+  id_reporte  Int      @id @default(autoincrement())
+  titulo      String   @db.VarChar(200)
+  descripcion String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  id_user_reportante Int
+  reportante         Usuario @relation("ReportanteReporte", fields: [id_user_reportante], references: [id_usuario])
+
+  id_aula Int
+  aula    Aula @relation("AulaReporte", fields: [id_aula], references: [id_aula])
+
+  id_mobiliario_afectado Int?
+  mobiliario             CatalogoInmobiliario? @relation("InmobiliarioReporte", fields: [id_mobiliario_afectado], references: [id_inmobiliario])
+
+  id_periodo Int
+  periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
+
+  @@map("reportes")
+}
+
+// ------------------------------------------------------------
+// 12. BITACORA_MANTENIMIENTO 
+// ------------------------------------------------------------
+model BitacoraMantenimiento {
+  id_bitacora_mantenimiento Int       @id @default(autoincrement())
+  fecha_inicio              DateTime
+  fecha_final               DateTime?
+  accion_realizada          String    @db.VarChar(200)
+  descripcion               String?   @db.Text
+  realizado_por             String?   @db.VarChar(150)
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  id_mobiliario Int
+  mobiliario    CatalogoInmobiliario @relation("InmobiliarioMantenimiento", fields: [id_mobiliario], references: [id_inmobiliario])
+
+  id_aula Int
+  aula    Aula @relation("AulaMantenimiento", fields: [id_aula], references: [id_aula])
+
+  id_periodo Int
+  periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
+
+  @@map("bitacora_mantenimiento")
+}
+
+// ------------------------------------------------------------
+// 12. CONFERENCIA (Modulo Ponente)
+// ------------------------------------------------------------
+model Conferencia {
+  id_conferencia           Int            @id @default(autoincrement())
+  titulo                   String         @db.VarChar(200)
+  descripcion              String?        @db.Text
+  tematica                 String?        @db.VarChar(150)
+  nivel_academico_objetivo NivelAcademico @default(ambos)
+  duracion_estimada_min    Int            @default(60)
+  fecha_realizada          DateTime?
+  estado                   Int            @default(1)
+
+  id_ponente Int
+  ponente    Usuario @relation("PonenteConferencia", fields: [id_ponente], references: [id_usuario])
+
+  id_actividad Int
+  actividad    Actividad @relation(fields: [id_actividad], references: [id_actividad])
+
+  id_aula_utilizada Int?
+  aula              Aula? @relation("AulaConferencia", fields: [id_aula_utilizada], references: [id_aula])
+
+  id_periodo Int
+  periodo    Periodo @relation(fields: [id_periodo], references: [id_periodo])
+
+  materiales      MaterialDeApoyo[]
+  registroEvento  RegistroEvento?
+  feedbacks       FeedbackAsistente[]
+  comentariosForo ComentarioForo[]    @relation("EventoForo")
+  evaluaciones    EvaluacionEvento[]  @relation("EventoEvaluacion")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("conferencias")
+}
+
+// ------------------------------------------------------------
+// 13. MATERIAL DE APOYO
+// ------------------------------------------------------------
+model MaterialDeApoyo {
+  id_material        Int          @id @default(autoincrement())
+  tipo_archivo       TipoMaterial @default(otro)
+  titulo_material    String       @db.VarChar(150)
+  url_almacenamiento String       @db.VarChar(255)
+  tamanio_bytes      Int          @default(0)
+  publico            Boolean      @default(true)
+
+  id_conferencia Int
+  conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("materiales_apoyo")
+}
+
+// ------------------------------------------------------------
+// 14. REGISTRO EVENTO (Conferencia Realizada)
+// ------------------------------------------------------------
+model RegistroEvento {
+  id_registro                   Int     @id @default(autoincrement())
+  num_asistentes_real           Int     @default(0)
+  num_participantes_registrados Int     @default(0)
+  porcentaje_asistencia         Decimal @default(0) @db.Decimal(5, 2)
+  comentario_general_ponente    String? @db.Text
+
+  id_conferencia Int         @unique
+  conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("registros_eventos")
+}
+
+// ------------------------------------------------------------
+// 15. FEEDBACK ASISTENTE (Motor ML)
+// ------------------------------------------------------------
+model FeedbackAsistente {
+  id_feedback Int @id @default(autoincrement())
+
+  // Perfil
+  nivel_academico NivelAcademico
+  especialidad    String?        @db.VarChar(150)
+  genero          Genero         @default(prefiero_no_decir)
+
+  // Engagement
+  duracion_interaccion_min Int                @default(0)
+  total_interacciones      Int                @default(0)
+  tareas_completadas       Int                @default(0)
+  porcentaje_aciertos      Decimal            @default(0) @db.Decimal(5, 2)
+  calificacion             Decimal            @default(0) @db.Decimal(4, 2)
+  participation_level      ParticipationLevel @default(pasivo)
+
+  // NLP & Sentiment
+  sentimiento_general SentimientoGeneral @default(neutral)
+  score_logistica     Int                @default(3)
+  score_contenido     Int                @default(3)
+  comentario_escrito  String?            @db.Text
+
+  // Metadatos
+  fuente String @default("sistema") @db.VarChar(50)
+
+  // Relaciones
+  id_conferencia Int
+  conferencia    Conferencia @relation(fields: [id_conferencia], references: [id_conferencia])
+
+  id_usuario Int?
+  usuario    Usuario? @relation("UsuarioFeedback", fields: [id_usuario], references: [id_usuario])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("feedbacks_asistentes")
+}
+
+// ------------------------------------------------------------
+// 16. COMENTARIO FORO (Live Discussion)
+// ------------------------------------------------------------
+model ComentarioForo {
+  id_comentario Int      @id @default(autoincrement())
+  mensaje       String   @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  id_evento Int
+  evento    Conferencia @relation("EventoForo", fields: [id_evento], references: [id_conferencia])
+
+  id_usuario Int
+  usuario    Usuario @relation("UsuarioForo", fields: [id_usuario], references: [id_usuario])
+
+  id_comentario_padre Int?
+  comentarioPadre     ComentarioForo?  @relation("ComentarioHijos", fields: [id_comentario_padre], references: [id_comentario])
+  respuestas          ComentarioForo[] @relation("ComentarioHijos")
+
+  @@map("comentarios_foro")
+}
+
+// ------------------------------------------------------------
+// 17. EVALUACION EVENTO (Post-Event NLP Data)
+// ------------------------------------------------------------
+model EvaluacionEvento {
+  id_evaluacion           Int      @id @default(autoincrement())
+  calificacion            Decimal  @db.Decimal(2, 1) // 0.0 a 5.0
+  porcentaje_satisfaccion Int // 0 a 100
+  comentario_escrito      String?  @db.Text
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  id_evento Int
+  evento    Conferencia @relation("EventoEvaluacion", fields: [id_evento], references: [id_conferencia])
+
+  id_usuario Int
+  usuario    Usuario @relation("UsuarioEvaluacion", fields: [id_usuario], references: [id_usuario])
+
+  @@unique([id_evento, id_usuario])
+  @@map("evaluaciones_eventos")
+}

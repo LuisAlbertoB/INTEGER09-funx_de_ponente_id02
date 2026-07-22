@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: solicitud_espacios
+      POSTGRES_PASSWORD: password_seguro_produccion
+      POSTGRES_DB: solicitud_espacios
+    ports:
+      # Expuesto localmente solo para debugging si es necesario (opcional cerrar en prod)
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  nlp:
+    build:
+      context: ../../nlp_service # El contexto es la carpeta nlp_service (dos niveles arriba si se corre desde deploy/)
+      dockerfile: Dockerfile
+    container_name: nlp_api
+    restart: always
+    # NO exponemos puertos al host (EC2) para que Flutter/Internet no pueda acceder directo a la IA.
+    # Solo Node.js podrá comunicarse con él internamente en el puerto 8000.
+    volumes:
+      - nlp_models:/app/models_cache
+    networks:
+      - app_network
+    # IMPORTANTE para t3.small: Limitar recursos si es necesario
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 1G
+
+  api:
+    build:
+      context: .. # El contexto es la raíz del proyecto Node.js
+      dockerfile: deploy/Dockerfile
+    container_name: node_api
+    restart: always
+    ports:
+      # Flutter consumirá la IP elástica 3.226.156.228 a través del puerto 80.
+      # FUTURO NGINX: Cuando se añada HTTPS, este puerto se cambiará a uno interno (ej. "3000") 
+      # y Nginx será el único servicio exponiendo 80/443.
+      - "80:3000" 
+    environment:
+      # Conexión interna dentro de la red de Docker
+      DATABASE_URL: "postgresql://solicitud_espacios:password_seguro_produccion@db:5432/solicitud_espacios?schema=public"
+      NLP_SERVICE_URL: "http://nlp:8000"
+      JWT_SECRET: "cambia_este_secreto_por_algo_seguro_para_aws"
+      UPLOAD_DIR: "uploads/materiales"
+      PORT: 3000
+    depends_on:
+      - db
+      - nlp
+    volumes:
+      - uploads_data:/app/uploads
+    command: /bin/sh -c "npx prisma db push --accept-data-loss && node prisma/seed.js && npm start"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  pgdata: # Volumen para persistir los datos de PostgreSQL
+  uploads_data: # Volumen para persistir PDFs y PPTXs
+  nlp_models: # Volumen para persistir modelos de IA y base vectorial FAISS
