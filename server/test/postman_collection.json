@@ -1,0 +1,124 @@
+{
+  "info": {
+    "name": "Solicitud Espacios API",
+    "description": "Colección generada para la API de Solicitud de Espacios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matricula\": \"123456\",\n  \"contrasena\": \"password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        { "name": "Obtener Usuarios", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] } } },
+        { "name": "Crear Usuario", "request": { "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"nombre_completo\": \"Juan Perez\",\n  \"matricula\": \"0001\",\n  \"contrasena\": \"1234\"\n}"}, "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] } } },
+        { "name": "Actualizar Estado", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"estado\": \"inactivo\"\n}"}, "url": { "raw": "{{base_url}}/api/usuarios/1/estado", "host": ["{{base_url}}"], "path": ["api", "usuarios", "1", "estado"] } } },
+        { "name": "Eliminar Usuario", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/api/usuarios/1", "host": ["{{base_url}}"], "path": ["api", "usuarios", "1"] } } }
+      ]
+    },
+    {
+      "name": "Edificios",
+      "item": [
+        { "name": "Obtener Edificios", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/edificios", "host": ["{{base_url}}"], "path": ["api", "edificios"] } } }
+      ]
+    },
+    {
+      "name": "Aulas",
+      "item": [
+        { "name": "Obtener Aulas", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/aulas", "host": ["{{base_url}}"], "path": ["api", "aulas"] } } }
+      ]
+    },
+    {
+      "name": "Mobiliario",
+      "item": [
+        { "name": "Obtener Mobiliario", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/mobiliario", "host": ["{{base_url}}"], "path": ["api", "mobiliario"] } } }
+      ]
+    },
+    {
+      "name": "Solicitudes",
+      "item": [
+        { "name": "Obtener Solicitudes", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/solicitudes", "host": ["{{base_url}}"], "path": ["api", "solicitudes"] } } },
+        { "name": "Crear Solicitud", "request": { "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{}"}, "url": { "raw": "{{base_url}}/api/solicitudes", "host": ["{{base_url}}"], "path": ["api", "solicitudes"] } } },
+        { "name": "Actualizar Solicitud", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{}"}, "url": { "raw": "{{base_url}}/api/solicitudes/1", "host": ["{{base_url}}"], "path": ["api", "solicitudes", "1"] } } }
+      ]
+    },
+    {
+      "name": "Solicitudes Inmobiliario",
+      "item": [
+        { "name": "Obtener Solicitudes Inmobiliario", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/solicitudes-inmobiliario", "host": ["{{base_url}}"], "path": ["api", "solicitudes-inmobiliario"] } } },
+        { "name": "Crear Solicitud Inmobiliario", "request": { "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{}"}, "url": { "raw": "{{base_url}}/api/solicitudes-inmobiliario", "host": ["{{base_url}}"], "path": ["api", "solicitudes-inmobiliario"] } } },
+        { "name": "Actualizar Solicitud Inmobiliario", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{}"}, "url": { "raw": "{{base_url}}/api/solicitudes-inmobiliario/1", "host": ["{{base_url}}"], "path": ["api", "solicitudes-inmobiliario", "1"] } } }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        { "name": "Obtener Reportes", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/reportes", "host": ["{{base_url}}"], "path": ["api", "reportes"] } } }
+      ]
+    },
+    {
+      "name": "Periodos",
+      "item": [
+        { "name": "Obtener Periodos", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/periodos", "host": ["{{base_url}}"], "path": ["api", "periodos"] } } },
+        { "name": "Obtener Periodo Activo", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/periodos/active", "host": ["{{base_url}}"], "path": ["api", "periodos", "active"] } } },
+        { "name": "Crear Periodo", "request": { "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{}"}, "url": { "raw": "{{base_url}}/api/periodos", "host": ["{{base_url}}"], "path": ["api", "periodos"] } } },
+        { "name": "Actualizar Periodo", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{}"}, "url": { "raw": "{{base_url}}/api/periodos/1", "host": ["{{base_url}}"], "path": ["api", "periodos", "1"] } } }
+      ]
+    },
+    {
+      "name": "Actividades",
+      "item": [
+        { "name": "Obtener Actividades", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/actividades", "host": ["{{base_url}}"], "path": ["api", "actividades"] } } }
+      ]
+    },
+    {
+      "name": "Configuraciones",
+      "item": [
+        { "name": "Obtener Configuraciones", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/configuraciones", "host": ["{{base_url}}"], "path": ["api", "configuraciones"] } } }
+      ]
+    }
+  ]
+}

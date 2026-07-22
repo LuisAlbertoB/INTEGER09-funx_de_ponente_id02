@@ -1,0 +1,202 @@
+{
+  "info": {
+    "name": "API AWS EC2 - Solicitud Espacios + Ponente",
+    "description": "Colección configurada para apuntar directamente a la IP pública estática del EC2 en AWS.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://32.193.33.72",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "pega_aqui_tu_token_despues_del_login",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matricula\": \"000000\",\n  \"contrasena\": \"admin1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login (Ponente)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matricula\": \"111111\",\n  \"contrasena\": \"docente1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "▶️ Módulo Ponente (NUEVO)",
+      "item": [
+        {
+          "name": "1. Crear Conferencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Introducción a Machine Learning en Chiapas\",\n  \"descripcion\": \"Una charla básica sobre algoritmos de clustering y predicción\",\n  \"tematica\": \"Inteligencia Artificial\",\n  \"nivel_academico_objetivo\": \"ambos\",\n  \"duracion_estimada_min\": 90,\n  \"id_actividad\": 6,\n  \"id_periodo\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ponente/conferencias",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ponente", "conferencias"]
+            }
+          }
+        },
+        {
+          "name": "2. Obtener Mis Conferencias",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ponente/conferencias",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ponente", "conferencias"]
+            }
+          }
+        },
+        {
+          "name": "3. Actualizar Conferencia",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duracion_estimada_min\": 120,\n  \"nivel_academico_objetivo\": \"postgraduate\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ponente/conferencias/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ponente", "conferencias", "1"]
+            }
+          }
+        },
+        {
+          "name": "4. Subir Material de Apoyo (Archivo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "titulo_material",
+                  "value": "Diapositivas Principales de ML",
+                  "type": "text"
+                },
+                {
+                  "key": "tipo_archivo",
+                  "value": "pdf",
+                  "type": "text"
+                },
+                {
+                  "key": "archivo",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ponente/conferencias/1/materiales",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ponente", "conferencias", "1", "materiales"]
+            }
+          }
+        },
+        {
+          "name": "5. Eliminar Conferencia (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ponente/conferencias/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ponente", "conferencias", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios (Admin)",
+      "item": [
+        { "name": "Obtener Usuarios", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{jwt_token}}"}], "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] } } },
+        { "name": "Crear Usuario", "request": { "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{jwt_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"nombre_completo\": \"Nuevo Ponente\",\n  \"matricula\": \"555555\",\n  \"contrasena\": \"1234\",\n  \"rol\": \"ponente\"\n}"}, "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] } } },
+        { "name": "Actualizar Estado", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{jwt_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"estado\": 0\n}"}, "url": { "raw": "{{base_url}}/api/usuarios/1/estado", "host": ["{{base_url}}"], "path": ["api", "usuarios", "1", "estado"] } } },
+        { "name": "Eliminar Usuario", "request": { "method": "DELETE", "header": [{"key": "Authorization", "value": "Bearer {{jwt_token}}"}], "url": { "raw": "{{base_url}}/api/usuarios/1", "host": ["{{base_url}}"], "path": ["api", "usuarios", "1"] } } }
+      ]
+    },
+    {
+      "name": "Edificios & Aulas",
+      "item": [
+        { "name": "Obtener Edificios", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/edificios", "host": ["{{base_url}}"], "path": ["api", "edificios"] } } },
+        { "name": "Obtener Aulas", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/aulas", "host": ["{{base_url}}"], "path": ["api", "aulas"] } } }
+      ]
+    },
+    {
+      "name": "Periodos",
+      "item": [
+        { "name": "Obtener Periodos", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/periodos", "host": ["{{base_url}}"], "path": ["api", "periodos"] } } },
+        { "name": "Obtener Periodo Activo", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/periodos/active", "host": ["{{base_url}}"], "path": ["api", "periodos", "active"] } } }
+      ]
+    }
+  ]
+}

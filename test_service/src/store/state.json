@@ -1,0 +1,16 @@
+{
+  "admin_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjoxLCJtYXRyaWN1bGEiOiIwMDAwMDAiLCJub21icmVfY29tcGxldG8iOiJBZG1pbmlzdHJhZG9yIE1hc3RlciIsInJvbCI6ImFkbWluIiwiaWF0IjoxNzgyNzA3NDkyLCJleHAiOjE3ODI3MDk4OTJ9.gejCiw_mwEX5m1ihEuNOWd3LG3ahBmFwA71G7GELlxc",
+  "active_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjoxLCJtYXRyaWN1bGEiOiIwMDAwMDAiLCJub21icmVfY29tcGxldG8iOiJBZG1pbmlzdHJhZG9yIE1hc3RlciIsInJvbCI6ImFkbWluIiwiaWF0IjoxNzgyNzA3NDkyLCJleHAiOjE3ODI3MDk4OTJ9.gejCiw_mwEX5m1ihEuNOWd3LG3ahBmFwA71G7GELlxc",
+  "test_user_id": 9,
+  "test_edificio_id": 6,
+  "test_aula_id": 17,
+  "primera_actividad_id": 8,
+  "test_actividad_id": 9,
+  "test_mob_id": 12,
+  "active_periodo_id": 1,
+  "last_espacio_id": 18,
+  "last_evento_id": 9,
+  "last_solicitud_id": 10,
+  "test_conferencia_ponente_id": 10,
+  "test_reporte_id": 1
+}
