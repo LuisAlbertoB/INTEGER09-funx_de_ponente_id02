@@ -2,19 +2,21 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15
-    container_name: postgres_db
+    image: mysql:8.0
+    container_name: mysql_db
     restart: always
     environment:
-      POSTGRES_USER: solicitud_espacios
-      POSTGRES_PASSWORD: password_seguro_produccion
-      POSTGRES_DB: solicitud_espacios
+      MYSQL_ROOT_PASSWORD: password_seguro_root
+      MYSQL_DATABASE: campus_event
+      MYSQL_USER: campus_user
+      MYSQL_PASSWORD: password_seguro_produccion
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysqldata:/var/lib/mysql
     networks:
       - app_network
+    command: --default-authentication-plugin=mysql_native_password
 
   nlp:
     build:
@@ -36,7 +38,7 @@ services:
     ports:
       - "80:3000"
     environment:
-      DATABASE_URL: "postgresql://solicitud_espacios:password_seguro_produccion@db:5432/solicitud_espacios?schema=public"
+      DATABASE_URL: "mysql://campus_user:password_seguro_produccion@db:3306/campus_event"
       NLP_SERVICE_URL: "http://nlp:8000"
       JWT_SECRET: "secreto_seguro_monorepo_jwt"
       UPLOAD_DIR: "uploads/materiales"
@@ -55,6 +57,6 @@ networks:
     driver: bridge
 
 volumes:
-  pgdata:
+  mysqldata:
   uploads_data:
   nlp_models:

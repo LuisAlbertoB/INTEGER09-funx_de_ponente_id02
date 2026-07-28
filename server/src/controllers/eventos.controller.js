@@ -107,6 +107,56 @@ const findEventosByIds = async (ids) => {
   });
 };
 
+const inscribirse = async (userId, idConferencia) => {
+  return prisma.inscripcion.create({
+    data: { id_usuario: userId, id_conferencia: idConferencia },
+  });
+};
+
+const desinscribirse = async (userId, idConferencia) => {
+  return prisma.inscripcion.delete({
+    where: {
+      id_usuario_id_conferencia: { id_usuario: userId, id_conferencia: idConferencia },
+    },
+  });
+};
+
+const getMisInscripciones = async (userId) => {
+  return prisma.inscripcion.findMany({
+    where: { id_usuario: userId },
+    include: {
+      conferencia: {
+        include: {
+          ponente: { select: { nombre_completo: true } },
+          actividad: { select: { titulo_actividad: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+const deleteEvento = async (id) => {
+  return prisma.conferencia.delete({ where: { id_conferencia: id } });
+};
+
+const updateEvento = async (id, data) => {
+  return prisma.conferencia.update({
+    where: { id_conferencia: id },
+    data,
+  });
+};
+
+const getInscripcionesByEvento = async (idConferencia) => {
+  return prisma.inscripcion.findMany({
+    where: { id_conferencia: idConferencia },
+    include: {
+      usuario: { select: { nombre_completo: true, matricula: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
 module.exports = {
   createEvento,
   findEventoById,
@@ -117,5 +167,11 @@ module.exports = {
   createEvaluacion,
   createFeedbackAsistente,
   getHistorialUsuario,
-  findEventosByIds
+  findEventosByIds,
+  inscribirse,
+  desinscribirse,
+  getMisInscripciones,
+  deleteEvento,
+  updateEvento,
+  getInscripcionesByEvento,
 };

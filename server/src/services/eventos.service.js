@@ -5,8 +5,8 @@ const nlpClient = require('../services/nlp.client');
 const AppError = require('../utils/AppError');
 
 const createEvento = async (userId, data) => {
-  const { titulo, descripcion, tematica, nivel_academico_objetivo, id_actividad } = data;
-  
+  const { titulo, descripcion, tematica, nivel_academico_objetivo, id_actividad, fecha_realizada, hora_inicio, lugar_texto } = data;
+
   if (!titulo || !id_actividad) {
     throw new AppError('El título y id_actividad son requeridos.', 400);
   }
@@ -21,7 +21,10 @@ const createEvento = async (userId, data) => {
     id_ponente: userId,
     id_actividad: Number(id_actividad),
     id_periodo: periodoId,
-    estado: 1
+    estado: 1,
+    ...(fecha_realizada ? { fecha_realizada: new Date(fecha_realizada) } : {}),
+    ...(hora_inicio ? { hora_inicio } : {}),
+    ...(lugar_texto ? { lugar_texto } : {}),
   });
 
   // ── NLP Indexación Semántica en segundo plano (Fire & Forget) ──
@@ -214,6 +217,59 @@ const getRecomendaciones = async (userId) => {
   return eventosConScore.sort((a, b) => b.ai_score - a.ai_score);
 };
 
+const inscribirseEvento = async (userId, idEvento) => {
+  const evento = await eventosCtrl.findEventoById(idEvento);
+  if (!evento) throw new AppError('El evento no existe.', 404);
+  try {
+    return await eventosCtrl.inscribirse(userId, idEvento);
+  } catch (e) {
+    if (e.code === 'P2002') throw new AppError('Ya estás inscrito en este evento.', 409);
+    throw e;
+  }
+};
+
+const desinscribirseEvento = async (userId, idEvento) => {
+  try {
+    await eventosCtrl.desinscribirse(userId, idEvento);
+  } catch (e) {
+    throw new AppError('No estás inscrito en este evento.', 404);
+  }
+};
+
+const getMisInscripciones = async (userId) => {
+  return eventosCtrl.getMisInscripciones(userId);
+};
+
+const deleteEvento = async (id) => {
+  const evento = await eventosCtrl.findEventoById(id);
+  if (!evento) throw new AppError('El evento no existe.', 404);
+  await eventosCtrl.deleteEvento(id);
+};
+
+const updateEvento = async (id, data) => {
+  const evento = await eventosCtrl.findEventoById(id);
+  if (!evento) throw new AppError('El evento no existe.', 404);
+  const { titulo, descripcion, tematica, duracion_estimada_min, nivel_academico_objetivo, estado, url_imagen, fecha_realizada, hora_inicio, lugar_texto } = data;
+  const updateData = {};
+  if (titulo) updateData.titulo = titulo;
+  if (descripcion !== undefined) updateData.descripcion = descripcion;
+  if (tematica !== undefined) updateData.tematica = tematica;
+  if (duracion_estimada_min) updateData.duracion_estimada_min = Number(duracion_estimada_min);
+  if (nivel_academico_objetivo) updateData.nivel_academico_objetivo = nivel_academico_objetivo;
+  if (estado !== undefined) updateData.estado = Number(estado);
+  if (url_imagen !== undefined) updateData.url_imagen = url_imagen;
+  if (fecha_realizada !== undefined) updateData.fecha_realizada = fecha_realizada ? new Date(fecha_realizada) : null;
+  if (hora_inicio !== undefined) updateData.hora_inicio = hora_inicio || null;
+  if (lugar_texto !== undefined) updateData.lugar_texto = lugar_texto || null;
+  return eventosCtrl.updateEvento(id, updateData);
+};
+
+const getParticipantes = async (idEvento) => {
+  const evento = await eventosCtrl.findEventoById(idEvento);
+  if (!evento) throw new AppError('El evento no existe.', 404);
+  return eventosCtrl.getInscripcionesByEvento(idEvento);
+};
+
 module.exports = {
   createEvento,
   listEventos,
@@ -223,5 +279,11 @@ module.exports = {
   postComentarioForo,
   submitEvaluacion,
   submitFeedbackAsistente,
-  getRecomendaciones
+  getRecomendaciones,
+  inscribirseEvento,
+  desinscribirseEvento,
+  getMisInscripciones,
+  deleteEvento,
+  updateEvento,
+  getParticipantes,
 };
