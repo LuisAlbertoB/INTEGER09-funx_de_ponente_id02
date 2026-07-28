@@ -20,6 +20,8 @@ const ponenteRoutes = require('./routes/ponente.routes');
 const misEspaciosRoutes = require('./routes/misEspacios.routes');
 const eventosRoutes = require('./routes/eventos.routes');
 const catalogoRoutes = require('./routes/catalogo.routes');
+const incidenciasRoutes = require('./routes/incidencias.routes');
+const incidenciasCrudRoutes = require('./routes/incidencias_crud.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,10 +31,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir la carpeta de uploads de manera estática
+// Servir todos los uploads de manera estática
 const path = require('path');
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads/materiales';
 app.use('/uploads/materiales', express.static(path.resolve(process.cwd(), UPLOAD_DIR)));
+app.use('/uploads/eventos', express.static(path.resolve(process.cwd(), 'uploads/eventos')));
 
 // ── Montaje de rutas ────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -50,6 +53,8 @@ app.use('/api/ponente', ponenteRoutes);
 app.use('/api/mis-espacios', misEspaciosRoutes);
 app.use('/api/eventos', eventosRoutes);
 app.use('/api/catalogo', catalogoRoutes);
+app.use('/api/nlp', incidenciasRoutes);
+app.use('/api/incidencias', incidenciasCrudRoutes);
 
 // ── Ruta de health check ────────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {

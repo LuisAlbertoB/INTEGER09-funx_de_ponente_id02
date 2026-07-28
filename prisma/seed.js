@@ -1,10 +1,8 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
 const bcrypt = require('bcryptjs');
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Iniciando seeders...');
@@ -75,6 +73,21 @@ async function main() {
     },
   });
   console.log(`✅ Admin master creado: matricula=${adminMaster.matricula}`);
+
+  // ─── Admin Rodrigo ────────────────────────────────────────────────────────
+  const hashedRodrigo = await bcrypt.hash('123123123', 10);
+  await prisma.usuario.upsert({
+    where: { matricula: 'rodrigo@gmail.com' },
+    update: {},
+    create: {
+      nombre_completo: 'Rodrigo',
+      matricula: 'rodrigo@gmail.com',
+      contrasena: hashedRodrigo,
+      rol: 'admin',
+      estado: 1,
+    },
+  });
+  console.log('✅ Admin Rodrigo creado: matricula=rodrigo@gmail.com');
 
   // ─── Docente de Prueba ────────────────────────────────────────────────────
   const hashedDocente = await bcrypt.hash('docente1', 10);

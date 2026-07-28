@@ -11,11 +11,10 @@ const buildMeta = (totalRegistros, page, limit) => {
 const getEspacios = async (page = 1, limit = 10, filtrosQuery = {}) => {
   const skip = (page - 1) * limit;
   const take = limit;
-  
-  // Construir filtros simples si es necesario (ej. búsqueda por nombre)
+
   const filtros = {};
   if (filtrosQuery.buscar) {
-    filtros.nombre_clave = { contains: filtrosQuery.buscar, mode: 'insensitive' };
+    filtros.nombre_clave = { contains: filtrosQuery.buscar };
   }
 
   const { totalRegistros, espacios } = await catalogoCtrl.findEspaciosPaginados(skip, take, filtros);
@@ -31,19 +30,16 @@ const getEventos = async (page = 1, limit = 10, filtrosQuery = {}) => {
 
   const filtros = {};
   if (filtrosQuery.tematica) {
-    filtros.tematica = { contains: filtrosQuery.tematica, mode: 'insensitive' };
+    filtros.tematica = { contains: filtrosQuery.tematica };
   }
 
-  // Si hay consulta de búsqueda libre, usar Búsqueda Semántica
   if (filtrosQuery.buscar) {
     const semanticResults = await nlpClient.buscarEventosSemanticos(filtrosQuery.buscar, limit);
     if (semanticResults && semanticResults.length > 0) {
-      // Filtrar por los IDs devueltos por la IA
       const ids = semanticResults.map(r => r.id_evento);
       filtros.id_conferencia = { in: ids };
     } else {
-      // Búsqueda sin resultados semánticos (o NLP caído), fallback a búsqueda básica
-      filtros.titulo = { contains: filtrosQuery.buscar, mode: 'insensitive' };
+      filtros.titulo = { contains: filtrosQuery.buscar };
     }
   }
 
