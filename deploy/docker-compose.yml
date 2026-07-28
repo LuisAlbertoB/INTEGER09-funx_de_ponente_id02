@@ -1,25 +1,25 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:15
-    container_name: postgres_db
+    image: mysql:8.0
+    container_name: mysql_db
     restart: always
     environment:
-      POSTGRES_USER: solicitud_espacios
-      POSTGRES_PASSWORD: password_seguro_produccion
-      POSTGRES_DB: solicitud_espacios
+      MYSQL_ROOT_PASSWORD: password_seguro_root
+      MYSQL_DATABASE: campus_event
+      MYSQL_USER: campus_user
+      MYSQL_PASSWORD: password_seguro_produccion
     ports:
-      # Expuesto localmente solo para debugging si es necesario (opcional cerrar en prod)
-      - "5432:5432"
+      # Expuesto localmente solo para debugging si es necesario
+      - "3306:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysqldata:/var/lib/mysql
     networks:
       - app_network
+    command: --default-authentication-plugin=mysql_native_password
 
   nlp:
     build:
-      context: ../../nlp_service # El contexto es la carpeta nlp_service (dos niveles arriba si se corre desde deploy/)
+      context: ../../nlp_service # El contexto es la carpeta nlp_service (dos niveles arriba si se corre desde server/deploy/)
       dockerfile: Dockerfile
     container_name: nlp_api
     restart: always
@@ -37,18 +37,16 @@ services:
 
   api:
     build:
-      context: .. # El contexto es la raíz del proyecto Node.js
+      context: .. # El contexto es la raíz del proyecto Node.js (server/)
       dockerfile: deploy/Dockerfile
     container_name: node_api
     restart: always
     ports:
-      # Flutter consumirá la IP elástica 3.226.156.228 a través del puerto 80.
-      # FUTURO NGINX: Cuando se añada HTTPS, este puerto se cambiará a uno interno (ej. "3000") 
-      # y Nginx será el único servicio exponiendo 80/443.
+      # Flutter consumirá la IP elástica a través del puerto 80.
       - "80:3000" 
     environment:
       # Conexión interna dentro de la red de Docker
-      DATABASE_URL: "postgresql://solicitud_espacios:password_seguro_produccion@db:5432/solicitud_espacios?schema=public"
+      DATABASE_URL: "mysql://campus_user:password_seguro_produccion@db:3306/campus_event"
       NLP_SERVICE_URL: "http://nlp:8000"
       JWT_SECRET: "cambia_este_secreto_por_algo_seguro_para_aws"
       UPLOAD_DIR: "uploads/materiales"
@@ -67,6 +65,7 @@ networks:
     driver: bridge
 
 volumes:
-  pgdata: # Volumen para persistir los datos de PostgreSQL
+  mysqldata: # Volumen para persistir los datos de MySQL
   uploads_data: # Volumen para persistir PDFs y PPTXs
   nlp_models: # Volumen para persistir modelos de IA y base vectorial FAISS
+
